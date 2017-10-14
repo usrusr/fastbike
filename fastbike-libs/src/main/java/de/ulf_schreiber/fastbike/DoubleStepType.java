@@ -2,10 +2,12 @@ package de.ulf_schreiber.fastbike;
 
 import de.ulf_schreiber.fastbike.boundingpiecechain.BufferLooking;
 import de.ulf_schreiber.fastbike.boundingpiecechain.ContentType;
+import de.ulf_schreiber.fastbike.boundingpiecechain.DistanceBounds;
+import de.ulf_schreiber.fastbike.boundingpiecechain.Point;
 import de.ulf_schreiber.fastbike.boundingpiecechain.Step;
 
 
-public class DoubleStepType implements ContentType<DoubleStepType, DoubleStepType.Looker> {
+public class DoubleStepType implements ContentType<DoubleStepType, Step.Interface, DoubleStepType.Looker> {
     public static DoubleStepType instance = new DoubleStepType();
 
     @Override
@@ -24,12 +26,14 @@ public class DoubleStepType implements ContentType<DoubleStepType, DoubleStepTyp
     }
 
     @Override
-    public Looker createPointLooker() {
-        return new Looker();
+    public DoubleStepType.Looker createPointLooker() {
+        return new DoubleStepType.Looker();
     }
 
-
-    public class Looker extends Step.Implementation<Looker> implements BufferLooking<DoubleStepType> {
+    public static class Looker extends Step.Base implements
+            Step.Interface,
+            BufferLooking<Looker, Step.Interface>,
+            Step.Writers<Looker, Step.Interface> {
 
 
         double[] buffer;
@@ -54,10 +58,16 @@ public class DoubleStepType implements ContentType<DoubleStepType, DoubleStepTyp
         }
 
         @Override
-        public DoubleStepType type() {
-            return DoubleStepType.instance;
+        public void copyFrom(Step.Interface from) {
+            setDist(from.getDist());
+            setLatLng(from.getLat(), from.getLng());
         }
 
+        @Override
+        public void setLatLng(double lat, double lng) {
+            buffer[0] = lat;
+            buffer[1] = lng;
+        }
 
         @Override
         public double getLat() {
@@ -75,25 +85,8 @@ public class DoubleStepType implements ContentType<DoubleStepType, DoubleStepTyp
         }
 
         @Override
-        public boolean sameAs(Looker b, double precision) {
-            return
-                    Math.abs(getLat() - b.getLat()) < precision &&
-                            Math.abs(getLng() - b.getLng()) < precision &&
-                            Math.abs(getLat() - b.getLat()) < precision &&
-                            Math.abs(getDist() - b.getDist()) < precision
-                    ;
-        }
-
-
-        @Override
-        protected void setLenImpl(double len) {
-            buffer[2]=len;
-        }
-
-        @Override
-        protected void setLatLngImpl(double lat, double lng) {
-            buffer[0]=lat;
-            buffer[1]=lng;
+        public void setDist(double dist) {
+            buffer[2] = dist;
         }
     }
 }
