@@ -22,8 +22,8 @@ public abstract class Coordinate<
             R extends Reading<R> & CT,
             W extends Writing<R, W> & CT
             > extends Reading<R>, Value.Writing<R, W> {
-        double setLat(double latitude);
-        double setLng(double longitude);
+        void setLat(double latitude);
+        void setLng(double longitude);
     }
 
     interface Grouping<
@@ -42,10 +42,10 @@ public abstract class Coordinate<
             G extends Grouping<R, G> & CT,
             M extends Merging<R, G, M> & CT
             > extends Grouping<R,G>, Value.Merging<R, G, M> {
-        double setWest(double west);
-        double setNorth(double north);
-        double setEast(double east);
-        double setSouth(double south);
+        void setWest(double west);
+        void setNorth(double north);
+        void setEast(double east);
+        void setSouth(double south);
     }
 
     public interface PublicRead extends Reading<PublicRead>, CT {
@@ -55,16 +55,6 @@ public abstract class Coordinate<
     public interface PublicGroup extends Grouping<PublicRead, PublicGroup>, CT {
 
     }
-
-
-
-
-
-
-
-
-
-
 
     @Override
     public boolean sameAs(R one, R other) {
@@ -146,4 +136,27 @@ public abstract class Coordinate<
         toExtend.setEast(Math.max(myEast, east+offset));
         toExtend.setWest(Math.min(myWest, west+offset));
     }
+
+    abstract class Varing<V extends Varing<V> & CT> extends Value<R,W,G,M>.Varing<V> implements Writing<R,W> {
+        private double lat;
+        private double lng;
+
+        @Override public double getLat() {
+            return lat;
+        }
+        @Override public double getLng() {
+            return lng;
+        }
+        @Override public void setLat(double latitude) {
+            this.lat = latitude;
+        }
+        @Override public void setLng(double longitude) {
+            this.lng = longitude;
+        }
+
+    }
+
+    class Var extends Varing<Var> implements CT {
+    }
+
 }

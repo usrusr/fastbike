@@ -1,6 +1,10 @@
 package de.ulf_schreiber.fastbike.boundingpiecechain.value;
 
 
+import de.ulf_schreiber.fastbike.boundingpiecechain.Read;
+
+import java.nio.ByteBuffer;
+
 /**
  * base class for the type metaobject
  * @param <R>  element getters
@@ -42,6 +46,7 @@ public abstract class Value<
             M extends Merging<R,G,M>  & CT
         > extends Grouping<R,G> {
     }
+
     public interface PublicRead extends Reading<PublicRead>, CT {
 
     }
@@ -58,28 +63,81 @@ public abstract class Value<
     public void extendBy(M toExtend, G aggregate){};
 
 
-    public interface BufferLooking<X extends CT>  {
+    public interface BufferLooking<L extends BufferLooking<L>>  {
         /**
-         * @param array
-         * @param index in groups elements
-         * @param offset extra single elements
+         * @param buffer
+         * @param offset extra single bytes
          */
-        void at(Object array, int index, int offset);
-        void move(int direction);
+        L at(ByteBuffer buffer, int offset);
+        L moveRelative(int direction);
+        L moveAbsolute(int next);
         /** @return highest allowed index+1*/
         int size();
     }
-    protected abstract <L extends BufferLooking<W> & Writing<R,W> & CT> L createElementWriter();
-    protected abstract <L extends BufferLooking<M> & Merging<R,G,M> & CT> L createAggregateWriter();
-
-    public Reading<R> createElementReader(){
-        return createAggregateWriter();
-    }
-    public Grouping<R,G> createAggregateReader(){
-        return createAggregateWriter();
-    }
+    protected abstract Looking<?> createElementWriter();
 
     interface CT {
+
+    }
+
+
+    /**
+     * heavy, provided by operation not by storage
+     */
+    public abstract class Looking<L> implements BufferLooking<Looking<L>> , Writing<R,W> {
+        protected final int weight;
+        protected ByteBuffer buffer = null;
+        protected int offset;
+        protected int size;
+        protected int index;
+        protected int actualIndex;
+
+        protected final static int layerlen = 0;
+        /**
+         * @param size bytes per element (as determined by implementors)
+         */
+        protected Looking(int size, int fieldLimit) {
+            this.weight = Math.min(size, fieldLimit);
+        }
+
+        @Override
+        final public Looking<L> at(ByteBuffer buffer, int offset) {
+            this.buffer = buffer;
+            this.offset=offset;
+
+            if(buffer==null) {
+                size = 0;
+            } else {
+                size = (buffer.capacity() - offset) / weight;
+            }
+            this.index = 0;
+            return this;
+        }
+
+        @Override
+        final public Looking<L> moveRelative(int direction) {
+            int next = index + direction;
+            if(next < 0 || next >= size) throw new IndexOutOfBoundsException();
+            index = next;
+            actualIndex = offset + index*weight;
+            return this;
+        }
+
+        @Override
+        final public Looking<L> moveAbsolute(int next) {
+            if(next < 0 || next >= size) throw new IndexOutOfBoundsException();
+            index = next;
+            actualIndex = offset + index*weight;
+            return this;
+        }
+
+        @Override
+        final public int size() {
+            return size;
+        }
+    }
+
+    public abstract class Varing<V extends Varing<V> & Writing<R,W> & CT> implements Writing<R,W> {
 
     }
 }

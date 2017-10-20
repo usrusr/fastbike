@@ -82,4 +82,83 @@ abstract public class CoordinateDistance<
         toExtend.setDistance(toExtend.getDistance() + other.getDistance());
     }
 
+
+    @Override
+    protected Looker createElementWriter(){
+        return new Looker(0,0);
+    }
+
+    class Looker extends Value<R,W,G,M>.Looking<Looker> implements Writing<R,W> , CT{
+        protected Looker(int size, int fieldLimit) {
+            super(size + layerlen, fieldLimit);
+        }
+
+        @Override
+        public double getDistance() {
+            return buffer.getDouble(actualIndex + Coordinate.Looking.layerlen);
+        }
+
+        @Override
+        public void setDistance(double distance) {
+            buffer.putDouble(actualIndex + Coordinate.Looking.layerlen, distance);
+        }
+
+        @Override
+        public double getLat() {
+            return 0;
+        }
+
+        @Override
+        public double getLng() {
+            return 0;
+        }
+
+        @Override
+        public void setLat(double latitude) {
+
+        }
+
+        @Override
+        public void setLng(double longitude) {
+
+        }
+    }
+
+
+    class Var implements Writing<PublicRead,Var>, PublicRead {
+        private double lat;
+        private double lng;
+
+
+        @Override
+        public void setDistance(double distance) {
+
+        }
+
+        @Override
+        public void setLat(double latitude) {
+
+        }
+
+        @Override
+        public void setLng(double longitude) {
+
+        }
+
+        @Override
+        public double getDistance() {
+            return 0;
+        }
+
+        @Override
+        public double getLat() {
+            return 0;
+        }
+
+        @Override
+        public double getLng() {
+            return 0;
+        }
+    }
+
 }
