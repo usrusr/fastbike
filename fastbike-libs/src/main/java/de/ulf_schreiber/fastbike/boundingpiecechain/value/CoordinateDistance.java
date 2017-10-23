@@ -1,44 +1,44 @@
 package de.ulf_schreiber.fastbike.boundingpiecechain.value;
 
 abstract public class CoordinateDistance<
-        R extends CoordinateDistance.Reading<R> & Coordinate.Reading<R> & Value.CT,
-        W extends CoordinateDistance.Writing<R,W> & CoordinateDistance.Reading<R> & Coordinate.Writing<R,W> & Value.CT,
-        G extends CoordinateDistance.Grouping<R,G> & Coordinate.Grouping<R,G> & Value.CT,
-        M extends CoordinateDistance.Merging<R,G,M> & CoordinateDistance.Grouping<R,G> & Coordinate.Merging<R,G,M> & Value.CT
-    > extends Coordinate<R,W,G,M>{
+        R extends CoordinateDistance.Reading<R> & Coordinate.Reading<R>,
+        W extends CoordinateDistance.Writing<R,W> & CoordinateDistance.Reading<R> & Coordinate.Writing<R,W>,
+        G extends CoordinateDistance.Grouping<R,G> & Coordinate.Grouping<R,G>,
+        M extends CoordinateDistance.Merging<R,G,M> & CoordinateDistance.Grouping<R,G> & Coordinate.Merging<R,G,M>
+        > extends Coordinate<R,W,G,M>{
 
     public CoordinateDistance(double precision) {
         super(precision);
     }
 
     interface Reading <
-            R extends Reading<R> & CT
+            R extends Reading<R>
             > extends Coordinate.Reading<R> {
         double getDistance();
     }
     interface Writing<
-            R extends Reading<R> & CT,
-            W extends Writing<R,W> & CT
+            R extends Reading<R>,
+            W extends Writing<R,W>
             > extends Reading<R>, Coordinate.Writing<R,W> {
         void setDistance(double distance);
     }
     interface Grouping<
-            R extends Reading<R> & CT,
-            G extends Grouping<R,G> & CT
+            R extends Reading<R>,
+            G extends Grouping<R,G>
             > extends Coordinate.Grouping<R,G> {
         double getDistance();
     }
     interface Merging <
-            R extends Reading<R> & CT,
-            G extends Grouping<R,G> & CT,
-            M extends Merging<R,G,M>  & CT
+            R extends Reading<R>,
+            G extends Grouping<R,G>,
+            M extends Merging<R,G,M>
             > extends Grouping<R,G>, Coordinate.Merging<R,G,M> {
         void setDistance(double distance);
     }
-    public interface PublicRead extends Reading<PublicRead>, CT {
+    public interface PublicRead extends Reading<PublicRead> {
 
     }
-    public interface PublicGroup extends Grouping<PublicRead,PublicGroup>, CT {
+    public interface PublicGroup extends Grouping<PublicRead,PublicGroup> {
 
     }
 
@@ -83,82 +83,46 @@ abstract public class CoordinateDistance<
     }
 
 
-    @Override
-    protected Looker createElementWriter(){
-        return new Looker(0,0);
-    }
+//    protected abstract class ElementLooking<L extends Looking<L> & Writing<R,W>> extends Coordinate<R,W,G,M>.ElementLooking<L> implements Writing<R,W>{
+//        private final int skip;
+//        protected ElementLooking(int subsize, int fieldLimit) {
+//            super(subsize + 4, fieldLimit);
+//            skip = weight - subsize;
+//        }
+//
+//        @Override public double getDistance() {
+//            return buffer.getDouble(actualIndex + Coordinate.ElementLooking.levellen);
+//        }
+//
+//        @Override public void setDistance(double distance) {
+//            buffer.putDouble(actualIndex + Coordinate.ElementLooking.levellen, distance);
+//        }
+//    }
 
-    class Looker extends Value<R,W,G,M>.Looking<Looker> implements Writing<R,W> , CT{
-        protected Looker(int size, int fieldLimit) {
-            super(size + layerlen, fieldLimit);
-        }
+    protected abstract static class Varing<V extends Varing<V>> extends Coordinate.Varing<V> implements Writing<V,V> {
+        private double distance;
 
         @Override
         public double getDistance() {
-            return buffer.getDouble(actualIndex + Coordinate.Looking.layerlen);
+            return distance;
         }
 
         @Override
         public void setDistance(double distance) {
-            buffer.putDouble(actualIndex + Coordinate.Looking.layerlen, distance);
-        }
-
-        @Override
-        public double getLat() {
-            return 0;
-        }
-
-        @Override
-        public double getLng() {
-            return 0;
-        }
-
-        @Override
-        public void setLat(double latitude) {
-
-        }
-
-        @Override
-        public void setLng(double longitude) {
-
+            this.distance=distance;
         }
     }
 
-
-    class Var implements Writing<PublicRead,Var>, PublicRead {
-        private double lat;
-        private double lng;
-
+    static class Var extends Varing<Var> {
 
         @Override
-        public void setDistance(double distance) {
-
+        public Var read() {
+            return this;
         }
 
         @Override
-        public void setLat(double latitude) {
-
-        }
-
-        @Override
-        public void setLng(double longitude) {
-
-        }
-
-        @Override
-        public double getDistance() {
-            return 0;
-        }
-
-        @Override
-        public double getLat() {
-            return 0;
-        }
-
-        @Override
-        public double getLng() {
-            return 0;
+        public Var write() {
+            return this;
         }
     }
-
 }

@@ -1,10 +1,12 @@
 package de.ulf_schreiber.fastbike.boundingpiecechain.value;
 
+import java.io.IOException;
+
 public abstract class Coordinate<
-        R extends Coordinate.Reading<R> & Value.Reading<R> & Value.CT,
-        W extends Coordinate.Writing<R,W> & Coordinate.Reading<R> & Value.Writing<R,W> & Value.CT,
-        G extends Coordinate.Grouping<R,G> & Value.Grouping<R,G> & Value.CT,
-        M extends Coordinate.Merging<R,G,M> & Coordinate.Grouping<R,G> & Value.Merging<R,G,M> & Value.CT
+        R extends Coordinate.Reading<R> & Value.Reading<R>,
+        W extends Coordinate.Writing<R,W> & Coordinate.Reading<R> & Value.Writing<R,W>,
+        G extends Coordinate.Grouping<R,G> & Value.Grouping<R,G>,
+        M extends Coordinate.Merging<R,G,M> & Coordinate.Grouping<R,G> & Value.Merging<R,G,M>
         > extends Value<R, W, G, M> {
 
     public Coordinate(double precision) {
@@ -12,23 +14,23 @@ public abstract class Coordinate<
     }
 
     interface Reading<
-            R extends Reading<R> & CT
+            R extends Reading<R>
             > extends Value.Reading<R> {
         double getLat();
         double getLng();
     }
 
     interface Writing<
-            R extends Reading<R> & CT,
-            W extends Writing<R, W> & CT
+            R extends Reading<R>,
+            W extends Writing<R, W>
             > extends Reading<R>, Value.Writing<R, W> {
         void setLat(double latitude);
         void setLng(double longitude);
     }
 
     interface Grouping<
-            R extends Reading<R> & CT,
-            G extends Grouping<R, G> & CT
+            R extends Reading<R>,
+            G extends Grouping<R, G>
             > extends Value.Grouping<R, G> {
 
         double getWest();
@@ -38,9 +40,9 @@ public abstract class Coordinate<
     }
 
     interface Merging<
-            R extends Reading<R> & CT,
-            G extends Grouping<R, G> & CT,
-            M extends Merging<R, G, M> & CT
+            R extends Reading<R>,
+            G extends Grouping<R, G>,
+            M extends Merging<R, G, M>
             > extends Grouping<R,G>, Value.Merging<R, G, M> {
         void setWest(double west);
         void setNorth(double north);
@@ -48,14 +50,13 @@ public abstract class Coordinate<
         void setSouth(double south);
     }
 
-    public interface PublicRead extends Reading<PublicRead>, CT {
+    public interface PublicRead extends Reading<PublicRead> {
 
     }
 
-    public interface PublicGroup extends Grouping<PublicRead, PublicGroup>, CT {
+    public interface PublicGroup extends Grouping<PublicRead, PublicGroup> {
 
     }
-
     @Override
     public boolean sameAs(R one, R other) {
         return
@@ -137,7 +138,43 @@ public abstract class Coordinate<
         toExtend.setWest(Math.min(myWest, west+offset));
     }
 
-    abstract class Varing<V extends Varing<V> & CT> extends Value<R,W,G,M>.Varing<V> implements Writing<R,W> {
+    @Override
+    void stringifyPoint(Appendable sw, R point){
+        try {
+            if(point==null) {
+                sw.append("null");
+            }else{
+                sw.append('[').append(""+point.getLat()).append(':').append(""+point.getLng()).append(']');
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+//    protected abstract class ElementLooking<L extends Looking<L> & Writing<R,W>> extends Looking<L> implements Writing<R,W>{
+//        private final int skip;
+//        protected ElementLooking(int subsize, int fieldLimit) {
+//            super(subsize + 8, fieldLimit);
+//            skip = weight - (subsize + 8);
+//        }
+//        @Override public double getLat() {
+//            return buffer.getDouble(actualIndex);
+//        }
+//
+//        @Override public double getLng() {
+//            return buffer.getDouble(actualIndex + skip + 4);
+//        }
+//
+//        @Override public void setLat(double latitude) {
+//            buffer.putDouble(actualIndex, latitude);
+//        }
+//
+//        @Override public void setLng(double longitude) {
+//            buffer.putDouble(actualIndex + skip + 4, longitude);
+//        }
+//    }
+
+    protected abstract static class Varing<V extends Varing<V>> extends Value.Varing<V> implements Writing<V,V> {
         private double lat;
         private double lng;
 
@@ -156,7 +193,16 @@ public abstract class Coordinate<
 
     }
 
-    class Var extends Varing<Var> implements CT {
+    static class Var extends Varing<Var> {
+        @Override
+        public Var read() {
+            return this;
+        }
+
+        @Override
+        public Var write() {
+            return this;
+        }
     }
 
 }
