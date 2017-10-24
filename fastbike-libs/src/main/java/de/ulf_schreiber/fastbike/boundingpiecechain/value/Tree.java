@@ -2,14 +2,15 @@ package de.ulf_schreiber.fastbike.boundingpiecechain.value;
 
 import java.util.Iterator;
 
-public class Tree<
+public abstract class Tree<
         V extends CoordinateDistance<R,W,G,M>,
         R extends CoordinateDistance.Reading<R>,
         W extends CoordinateDistance.Writing<R,W> & CoordinateDistance.Reading<R>,
         G extends CoordinateDistance.Grouping<R,G>,
         M extends CoordinateDistance.Merging<R,G,M> & CoordinateDistance.Grouping<R,G>,
         B,
-        L extends Value.Looking<L,R,W,B>
+        L extends Value.Editor<L,R,W,B>,
+        A extends Value.Editor<A,G,M,B>
     > {
     final V meta;
 
@@ -17,13 +18,8 @@ public class Tree<
         this.meta = meta;
     }
 
-
-
-
-
-
     int blocksize = 16;
-//    double resolution = 0.0000001;
+
     void stringifyPoint(Appendable sw, R point){
         meta.stringifyPoint(sw,point);
     }
@@ -39,26 +35,29 @@ public class Tree<
             G extends CoordinateDistance.Grouping<R,G>,
             M extends CoordinateDistance.Merging<R,G,M> & CoordinateDistance.Grouping<R,G>,
             B,
-            L extends Value.Looking<L,R,W,B>,
-            N extends Node<V,R,W,G,M,B,L,N>
-        > implements CoordinateDistance.Merging<R,G,M>{
+            L extends Value.Editor<L,R,W,B>,
+            A extends Value.Editor<A,G,M,B>,
+            N extends Node<V,R,W,G,M,B,L,A,N>
+        > {
 //        void build(BoundingBuilder<R, M> builder) {
 //            if(builder.toSkip<=0 && builder.toVisit>= distance){
 //                builder.toVisit-= distance;
 //                builder.extendBoundsFor(this);
 //            }
 //        }
-
-        public void build(Tree<V,R,W,G,M,B,L>.BoundingBuilder builder) {
-            V meta = builder.tree.meta;
-            if(builder.toSkip < meta.precision) {
-                double rest = builder.toVisit - getDistance();
-                if(rest > meta.precision){
-                    builder.toVisit = rest;
-                    meta.extendBy(builder.result, this.group());
-                }
-            }
-        }
+        B array;
+        int elements = 0;
+        abstract void build(Tree<V,R,W,G,M,B,L,A>.BoundingBuilder builder);
+//        public void build(Tree<V,R,W,G,M,B,L,A>.BoundingBuilder builder) {
+//            V meta = builder.tree.meta;
+//            if(builder.toSkip < meta.precision) {
+//                double rest = builder.toVisit - getDistance();
+//                if(rest > meta.precision){
+//                    builder.toVisit = rest;
+//                    meta.extendBy(builder.result, this.group());
+//                }
+//            }
+//        }
 
         abstract int depth();
     }
@@ -69,27 +68,28 @@ public class Tree<
             G extends CoordinateDistance.Grouping<R,G>,
             M extends CoordinateDistance.Merging<R,G,M> & CoordinateDistance.Grouping<R,G>,
             B,
-            L extends Value.Looking<L,R,W,B>
-    > extends Node<V,R,W,G,M,B,L,LeafNode<V,R,W,G,M,B,L>> {
-        B array;
-        int elements = 0;
+            L extends Value.Editor<L,R,W,B>,
+            A extends Value.Editor<A,G,M,B>
+    > extends Node<V,R,W,G,M,B,L,A,LeafNode<V,R,W,G,M,B,L,A>> {
 
-        LeafNode(Tree<V,R,W,G,M,B,L> tree, Iterator<R> it, L looker, M bounds) {
-            array = looker.createBuffer(tree.blocksize);
-            looker.wrap(array,tree.blocksize,0);
-            while(it.hasNext() && elements <tree.blocksize){
+
+        LeafNode(Tree<V,R,W,G,M,B,L,A> tree, Iterator<R> it, L elemLooker, M mutableBoundsReturn) {
+            final int blocksize = tree.blocksize;
+            final V meta = tree.meta;
+            array = elemLooker.createBuffer(blocksize);
+            elemLooker.wrap(array, blocksize,0);
+            while(it.hasNext() && elements < blocksize){
                 R next = it.next();
-                tree.meta.copy(next, looker.write());
-                tree.meta.extendBy(bounds, next);
-                looker.moveRelative(1);
+                meta.copy(next, elemLooker.write());
+                meta.extendBy(mutableBoundsReturn, next);
+                elemLooker.moveRelative(1);
                 elements++;
             }
         }
 
         @Override int depth() { return 0; }
         @Override
-        public void build(Tree<V,R,W,G,M,B,L>.BoundingBuilder builder) {
-            super.build(builder);
+        public void build(Tree<V,R,W,G,M,B,L,A>.BoundingBuilder builder) {
 
             V meta = builder.tree.meta;
             final double precision = meta.precision;
@@ -126,48 +126,122 @@ public class Tree<
             G extends CoordinateDistance.Grouping<R,G>,
             M extends CoordinateDistance.Merging<R,G,M> & CoordinateDistance.Grouping<R,G>,
             B,
-            L extends Value.Looking<L,R,W,B> & CoordinateDistance.Writing<R,W>
-        > extends Node<V,R,W,G,M,B,L,GroupNode<V,R,W,G,M,B,L>> {
+            L extends Value.Editor<L,R,W,B>,
+            A extends Value.Editor<A,G,M,B>
+        > extends Node<V,R,W,G,M,B,L,A,GroupNode<V,R,W,G,M,B,L,A>> {
 
-        Node<V,R,W,G,M,B,L,?>[] children;
-        int len;
+        Node<V,R,W,G,M,B,L,A,?>[] children;
+
         int depth;
 
-        GroupNode(Tree<V,R,W,G,M,B,L> tree) {
+        @Override
+        int depth() {
+            return depth;
+        }
+
+        GroupNode(Tree<V,R,W,G,M,B,L,A> tree, Iterator<R> it, Value.Editor<L,R,W,B> elemLooker, Value.Editor<A,G,M,B> groupLooker, M mutableBoundsReturn, Node<V,R,W,G,M,B,L,A,?> firstChild, int depth){
             children = new Node[tree.blocksize];
+            array = groupLooker.createBuffer(tree.blocksize);
+            final V meta = tree.meta;
+            this.depth = depth;
+
+            groupLooker.wrap(array, 0, 0);
+
+            M groupLookerWrite = groupLooker.write();
+            G mutableBoundsReturnRead = mutableBoundsReturn.group();
+
+            if(firstChild!=null) { // creating a new root
+                children[0]=firstChild;
+                meta.clearMerge(groupLookerWrite);
+                meta.extendBy(groupLookerWrite, mutableBoundsReturnRead);
+            }
+
+            while(it.hasNext() && elements<tree.blocksize){
+                Node<V, R, W, G, M, B, L, A, ?> newNode;
+
+                if(depth==1){
+                    groupLooker.moveAbsolute(elements);
+                    newNode = tree.createLeafNode(tree, it, elemLooker, groupLookerWrite);
+                } else {
+                    meta.clearMerge(mutableBoundsReturn);
+                    newNode = tree.createGroupNodeNode(tree, it, elemLooker, groupLooker, mutableBoundsReturn, null, depth-1);
+                    groupLooker.wrap(array, elements, 0);
+                    meta.clearMerge(groupLookerWrite);
+                    meta.extendBy(groupLookerWrite, mutableBoundsReturnRead);
+                }
+                children[elements] = newNode;
+                elements++;
+            }
+
+            meta.clearMerge(mutableBoundsReturn);
+            groupLooker.wrap(array, 0, 0);
+            for(int i=0; i<elements;i++){
+                groupLooker.moveAbsolute(i);
+                meta.extendBy(mutableBoundsReturn, groupLooker.read());
+            }
         }
 
         @Override
-        public void build(Tree<V,R,W,G,M,B,L>.BoundingBuilder builder) {
-            super.build(builder);
-
+        public void build(Tree<V,R,W,G,M,B,L,A>.BoundingBuilder builder) {
             V meta = builder.tree.meta;
             final double precision = meta.precision;
             if(builder.toVisit < precision) return;
 
-            for(Node<V, R, W, G, M, B, L, ?> child : children) {
-                double childDist = child.getDistance();
-                if(childDist < builder.toSkip){
-                    builder.toSkip-=childDist;
+            A groupLooker = builder.groupLooker;
+            meta.clearMerge(groupLooker.write());
+            groupLooker.wrap(array, 0, 0);
+            G read = groupLooker.read();
+            for(int i=0; i<elements;i++){
+                groupLooker.moveAbsolute(i);
+                double childDist = read.getDistance();
+
+                double restToSkip = builder.toSkip-childDist;
+                if(restToSkip> precision){
+                    builder.toSkip = restToSkip;
                 }else{
-                    child.build(builder);
-                    if(builder.toVisit < precision) return;
+                    builder.toSkip = 0;
+                    double restToVisit = builder.toVisit-childDist;
+                    if(restToVisit > -precision){
+                        meta.extendBy(builder.result, read);
+                        builder.toVisit=restToVisit;
+                    }else{
+                        children[i].build(builder);
+                        return;
+                    }
                 }
             }
         }
+    }
+    class Segment {
+        final Node<V,R,W,G,M,B,L,A,?> children;
+        final G bounds;
 
-        /** @return newChild if already full */
-        public Node<V,R,W,G,M,B,L,?> add(Node<V,R,W,G,M,B,L,?> newChild, Tree<V,R,W,G,M,B,L> tree) {
-            if(len>=children.length){
-                return newChild;
-            }
-
-            tree.meta.extendBy(this.merge(), newChild.group());
-            children[len]=newChild;
-            len++;
-            return null;
+        Segment(Node<V, R, W, G, M, B, L, A, ?> children, G bounds) {
+            this.children = children;
+            this.bounds = bounds;
         }
     }
+    abstract LeafNode<V,R,W,G,M,B,L,A> createLeafNode(Tree<V,R,W,G,M,B,L,A> tree, Iterator<R> it, Value.Editor<L,R,W,B> looker, M bounds);
+    abstract GroupNode<V,R,W,G,M,B,L,A> createGroupNodeNode(Tree<V,R,W,G,M,B,L,A> tree, Iterator<R> it, Value.Editor<L,R,W,B> looker, Value.Editor<A,G,M,B> groupLooker, M bounds, Node<V,R,W,G,M,B,L,A,?> firstChild, int depth);
+
+    Segment makeTree(Iterable<R> iterable){
+        Value.Editor<L,R,W,B> elemLooker = meta.<L,B>createElementWriter();
+        Value.Editor<A,G,M,B> groupLooker = meta.<A,B>createAggregateWriter();
+        Iterator<R> it = iterable.iterator();
+        M mutableBounds = meta.createMutableBounds();
+        LeafNode<V,R,W,G,M,B,L,A> first = createLeafNode(this, it, elemLooker, mutableBounds);
+        Node<V,R,W,G,M,B,L,A,?> root = first;
+        int depth = 0;
+        while(it.hasNext()){
+            depth++;
+            root = createGroupNodeNode(this, it, elemLooker, groupLooker, mutableBounds, root, depth);
+        }
+
+        return new Segment(root, mutableBounds.group());
+
+
+    }
+
 //
 //    static class Piece<R extends Step.R<R> & Point.Sameable<R> & BufferLooking<T>, T extends ContentType<T, R, ?> >{
 //        final Node<R,T,?> root;
@@ -214,20 +288,22 @@ public class Tree<
 //    }
 //
     public class BoundingBuilder {
-        private final Tree<V,R,W,G,M,B,L> tree;
+        private final Tree<V,R,W,G,M,B,L,A> tree;
 
-        M result;
-        L valueLooker;
+        final M result;
+        final L valueLooker;
+        final A groupLooker;
 
         double toSkip;
         double toVisit;
 
-        public BoundingBuilder(double skipDistance, double distance, Tree<V,R,W,G,M,B,L> tree) {
+        public BoundingBuilder(double skipDistance, double distance, Tree<V,R,W,G,M,B,L,A> tree) {
             this.toSkip = skipDistance;
             this.toVisit = distance;
             this.tree = tree;
             result = tree.meta.createMutableBounds();
             valueLooker = tree.meta.<L,B>createElementWriter();
+            groupLooker = tree.meta.<A,B>createAggregateWriter();
         }
     }
 //    private abstract static class MutableBoundingBox {

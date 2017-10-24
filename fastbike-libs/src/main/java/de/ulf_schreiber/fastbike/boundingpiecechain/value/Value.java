@@ -63,7 +63,23 @@ public abstract class Value<
     public void extendBy(M toExtend, R point){}
     public void extendBy(M toExtend, G aggregate){};
 
+    public W clearWrite(W toClear){
+        return toClear;
+    }
+    public M clearMerge(M toClear){
+        return toClear;
+    }
 
+    protected final static double max(double a, double b) {
+        if(Double.isNaN(a)) return b;
+        if(Double.isNaN(b)) return a;
+        return Math.max(a,b);
+    }
+    protected final static double min(double a, double b) {
+        if(Double.isNaN(a)) return b;
+        if(Double.isNaN(b)) return a;
+        return Math.min(a,b);
+    }
 //    public interface BufferNav<L extends BufferNav<L,X,B>,X,B>  {
 ////        /**
 ////         * @param buffer
@@ -80,7 +96,8 @@ public abstract class Value<
     /**
      * must not be implemented in classes intended to be extended
      */
-    abstract <L extends Looking<L,R,W,B>, B> L createElementWriter();
+    abstract <L extends Editor<L,R,W,B>, B> L createElementWriter();
+    abstract <L extends Editor<L,G,M,B>, B> L createAggregateWriter();
     abstract M createMutableBounds();
 
     void stringifyPoint(Appendable sw, R point){
@@ -98,7 +115,7 @@ public abstract class Value<
     /**
      * heavy, provided by operation not by storage
      */
-    interface Looking<L extends Looking<L,R,W,B>,R,W,B>  {
+    interface Editor<L extends Editor<L,R,W,B>,R,W,B>  {
         BufferNav<L, R,W, B> wrap(B buffer, int elements, int offset);
         BufferNav<L, R,W, B> moveRelative(int direction);
         BufferNav<L, R,W, B> moveAbsolute(int next);
@@ -106,6 +123,7 @@ public abstract class Value<
         R read();
         W write();
     }
+
     static abstract class BufferNav<L,R,W,B> {
         protected final int weight;
 

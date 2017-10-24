@@ -66,6 +66,22 @@ public abstract class Coordinate<
     }
 
     @Override
+    public W clearWrite(W toClear) {
+        toClear.setLat(Double.NaN);
+        toClear.setLng(Double.NaN);
+        return super.clearWrite(toClear);
+    }
+
+    @Override
+    public M clearMerge(M toClear) {
+        toClear.setEast(Double.NaN);
+        toClear.setWest(Double.NaN);
+        toClear.setNorth(Double.NaN);
+        toClear.setSouth(Double.NaN);
+        return super.clearMerge(toClear);
+    }
+
+    @Override
     public void copy(R from, W to) {
         to.setLat(from.getLat());
         to.setLng(from.getLng());
@@ -74,7 +90,10 @@ public abstract class Coordinate<
 
     public boolean contains(Coordinate.Grouping<R, G> box, Coordinate.Reading<R> point) {
         double lat = point.getLat();
-        if(lat < box.getSouth()-precision || lat > box.getNorth()+precision) return false;
+        if(Double.isNaN(lat)) return false;
+        double south = box.getSouth();
+        if(Double.isNaN(south)) return false;
+        if(lat < south -precision || lat > box.getNorth()+precision) return false;
         double lng = point.getLng();
         double east = box.getEast() + precision;
         double west = box.getWest() -precision;
@@ -93,8 +112,9 @@ public abstract class Coordinate<
     public void extendBy(M toExtend, R point) {
         super.extendBy(toExtend, point);
         double lat = point.getLat();
-        toExtend.setNorth(Math.max(toExtend.getNorth(), lat));
-        toExtend.setSouth(Math.min(toExtend.getSouth(), lat));
+        if(Double.isNaN(lat)) return;
+        toExtend.setNorth(max(toExtend.getNorth(), lat));
+        toExtend.setSouth(min(toExtend.getSouth(), lat));
 
         double lng = point.getLng();
 
@@ -107,17 +127,18 @@ public abstract class Coordinate<
         while(lng +offset - myMid < -180) offset+=360;
         while(lng +offset - myMid > 180) offset-=360;
 
-        toExtend.setEast(Math.max(myEast, myEast+offset));
-        toExtend.setWest(Math.min(myWest, myWest+offset));
+        toExtend.setEast(max(myEast, myEast+offset));
+        toExtend.setWest(min(myWest, myWest+offset));
     }
+
 
     @Override
     public void extendBy(M toExtend, G other) {
         super.extendBy(toExtend, other);
         double north = other.getNorth();
         double south = other.getSouth();
-        toExtend.setNorth(Math.max(toExtend.getNorth(), north));
-        toExtend.setSouth(Math.min(toExtend.getSouth(), south));
+        toExtend.setNorth(max(toExtend.getNorth(), north));
+        toExtend.setSouth(min(toExtend.getSouth(), south));
 
 
         double east = other.getEast();
@@ -134,8 +155,8 @@ public abstract class Coordinate<
         while(mid+offset - myMid < -180) offset+=360;
         while(mid+offset - myMid > 180) offset-=360;
 
-        toExtend.setEast(Math.max(myEast, east+offset));
-        toExtend.setWest(Math.min(myWest, west+offset));
+        toExtend.setEast(max(myEast, east+offset));
+        toExtend.setWest(min(myWest, west+offset));
     }
 
     @Override
