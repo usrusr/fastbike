@@ -103,26 +103,30 @@ abstract public class CoordinateDistance<
         private double distance;
 
         @Override
-        public double getDistance() {
+        public final double getDistance() {
             return distance;
         }
 
         @Override
-        public void setDistance(double distance) {
+        public final void setDistance(double distance) {
             this.distance=distance;
         }
     }
 
+    protected abstract static class VaringAggregate<A extends VaringAggregate<A,R> & Merging<R,A,A>, R extends Reading<R>> extends Coordinate.VaringAggregate<A,R> implements Merging<R,A,A> {
+        private double distance;
+        @Override public double getDistance() {
+            return distance;
+        }
+
+        @Override public void setDistance(double distance) {
+            this.distance=distance;
+        }
+    }
+
+
+
     static class Var extends Varing<Var> {
 
-        @Override
-        public Var read() {
-            return this;
-        }
-
-        @Override
-        public Var write() {
-            return this;
-        }
     }
 }

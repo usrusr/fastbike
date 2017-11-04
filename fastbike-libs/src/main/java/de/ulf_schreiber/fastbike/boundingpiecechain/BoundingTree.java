@@ -78,7 +78,7 @@
 //        LeafNode(BoundingTree<R,T> tree, Iterator<Step> it, R looker) {
 //            array = tree.type.createArray(tree.blocksize*tree.type.size());
 //            int i=0;
-//            looker.at(array,0,0);
+//            looker.wrap(array,0,0);
 //            while(it.hasNext() && i<tree.blocksize){
 //                Step next = it.next();
 //
@@ -95,7 +95,7 @@
 //            super.build(builder);
 //
 //            R looker = builder.looker;
-//            looker.at(array, 0, 0);
+//            looker.wrap(array, 0, 0);
 //            final double resolution = builder.tree.resolution;
 //
 //            for(int i=0;i<size;i++){
@@ -178,12 +178,12 @@
 //        }
 //    }
 //    static class Undo<R extends Step.Getters<R> & Point.Sameable<R> & BufferLooking<T>, T extends ContentType<T, R, ?>> {
-//        int at;
+//        int wrap;
 //        int removed; // first n pieces are removed, rest added
 //        Piece<R, T>[] pieces;
 //
 //        final void apply(BoundingTree<R, T> tree) {
-//            ListIterator<Piece> iterator = tree.pieces.listIterator(at);
+//            ListIterator<Piece> iterator = tree.pieces.listIterator(wrap);
 //            int i = 0;
 //            for (; i < removed; i++) iterator.remove();
 //            int length = pieces.length;
@@ -191,7 +191,7 @@
 //        }
 //
 //        final void unapply(BoundingTree<R, T> tree) {
-//            ListIterator<Piece> iterator = tree.pieces.listIterator(at);
+//            ListIterator<Piece> iterator = tree.pieces.listIterator(wrap);
 //            int i = removed;
 //            int length = pieces.length;
 //            for (; i < length; i++) iterator.remove();
@@ -243,13 +243,13 @@
 //    public void append(Iterable<R> points){
 //        replace(Double.MAX_VALUE, 0, points);
 //    }
-//    public void insert(double at, Iterable<R> points){
-//        replace(at, 0, points);
+//    public void insert(double wrap, Iterable<R> points){
+//        replace(wrap, 0, points);
 //    }
-//    public void delete(double at, double distance){
-//        replace(at, distance, Collections.<R>emptyList());
+//    public void delete(double wrap, double distance){
+//        replace(wrap, distance, Collections.<R>emptyList());
 //    }
-//    public void replace(double at, double distance, Iterable<R> points){
+//    public void replace(double wrap, double distance, Iterable<R> points){
 //
 //    }
 //

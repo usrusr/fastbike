@@ -1,6 +1,8 @@
 package de.ulf_schreiber.fastbike.boundingpiecechain;
 
-public interface BufferLooking<W extends Point.Writers<W, P> & Point.Getters<P> , P extends Point.Getters<P> & ClosedType> extends Point.Writers<W, P> {
+import de.ulf_schreiber.fastbike.boundingpiecechain.value.Value;
+
+public interface BufferLooking<W extends Point.Writers<W, P> & Point.Getters<P> , P extends Point.Getters<P> & Value.CT> extends Point.Writers<W, P> {
     /**
      * @param array
      * @param index in groups elements

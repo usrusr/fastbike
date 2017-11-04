@@ -115,19 +115,21 @@ public abstract class Value<
     /**
      * heavy, provided by operation not by storage
      */
-    interface Editor<L extends Editor<L,R,W,B>,R,W,B>  {
-        BufferNav<L, R,W, B> wrap(B buffer, int elements, int offset);
-        BufferNav<L, R,W, B> moveRelative(int direction);
-        BufferNav<L, R,W, B> moveAbsolute(int next);
+    interface EditorI<L extends Editor<L,R,W,B> & EditorI<L,R,W,B>,R,W,B>  {
+        L wrap(B buffer, int elements, int offset);
+        L moveRelative(int direction);
+        L moveAbsolute(int next);
         B createBuffer(int elements);
         R read();
         W write();
     }
+//
+//    static abstract class BufferNav<L extends BufferNav<L,R,W,B>,R,W,B> implements Editor<L,R,W,B>{
 
-    static abstract class BufferNav<L,R,W,B> {
+    static abstract class Editor<L extends Editor<L,R,W,B>,R,W,B>  {
         protected final int weight;
 
-        private B buffer = null;
+        protected B buffer = null;
         protected int offset;
         protected int size;
         protected int index;
@@ -137,11 +139,16 @@ public abstract class Value<
         /**
          * @param size bytes per element (as determined by implementors)
          */
-        protected BufferNav(int size, int fieldLimit) {
+        protected Editor(int size, int fieldLimit) {
             this.weight = Math.min(size, fieldLimit);
         }
 
-        final public BufferNav<L,R,W,B> wrap(B buffer, int elements, int offset) {
+
+        @SuppressWarnings("unchecked")
+        private final L asEditor(){
+            return (L) this;
+        }
+        final public L wrap(B buffer, int elements, int offset) {
             this.buffer = buffer;
             this.offset=offset;
 
@@ -151,22 +158,22 @@ public abstract class Value<
                 size = elements;
             }
             this.index = 0;
-            return this;
+            return this.asEditor();
         }
 
-        final public BufferNav<L,R,W,B> moveRelative(int direction) {
+        final public L moveRelative(int direction) {
             int next = index + direction;
             if(next < 0 || next >= size) throw new IndexOutOfBoundsException();
             index = next;
             actualIndex = offset + index*weight;
-            return this;
+            return this.asEditor();
         }
 
-        final public BufferNav<L,R,W,B> moveAbsolute(int next) {
+        final public L moveAbsolute(int next) {
             if(next < 0 || next >= size) throw new IndexOutOfBoundsException();
             index = next;
             actualIndex = offset + index*weight;
-            return this;
+            return this.asEditor();
         }
 
         final public int size() {
@@ -175,10 +182,29 @@ public abstract class Value<
         int field(int fieldOffset){
             return actualIndex + fieldOffset;
         }
+
+        public abstract B createBuffer(int blocksize);
     }
 
 
     protected abstract static class Varing<V extends Varing<V> & Writing<V,V>> implements Writing<V,V> {
-
+        @SuppressWarnings("unchecked")
+        @Override public final V read() {
+            return (V) this;
+        }
+        @SuppressWarnings("unchecked")
+        @Override public final V write() {
+            return (V) this;
+        }
+    }
+    protected abstract static class VaringAggregate<A extends VaringAggregate<A,R> & Merging<R,A,A>, R extends Reading<R>> implements Merging<R,A,A> {
+        @SuppressWarnings("unchecked")
+        @Override public final A group() {
+            return (A) this;
+        }
+        @SuppressWarnings("unchecked")
+        @Override public A merge() {
+            return (A) this;
+        }
     }
 }

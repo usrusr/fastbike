@@ -1,11 +1,13 @@
 package de.ulf_schreiber.fastbike.boundingpiecechain;
 
 
+import de.ulf_schreiber.fastbike.boundingpiecechain.value.Value;
+
 /**
  * lng wraps around when extending over 180 or under-180
  */
 public class Bounds {
-    public interface Getters<A extends Getters<A, P>, P extends Point.Getters<P> & ClosedType> {
+    public interface Getters<A extends Getters<A, P>, P extends Point.Getters<P> & Value.CT> {
         double getEast();
         double getNorth();
         double getWest();
@@ -15,15 +17,15 @@ public class Bounds {
 
 
 
-    public interface Aggregate<A extends Aggregate<A,G,P> & Getters<A,P>, G extends Getters<G,P> & ClosedType, P extends Point.Getters<P> & ClosedType> {
+    public interface Aggregate<A extends Aggregate<A,G,P> & Getters<A,P>, G extends Getters<G,P> & Value.CT, P extends Point.Getters<P> & Value.CT> {
         void extendBy(P point);
         void extendBy(G aggregate);
     }
 
     /** closes the selftype hierarchy */
-    public interface Interface extends Getters<Interface, Point.Interface>, ClosedType{}
+    public interface Interface extends Getters<Interface, Point.Interface>, Value.CT {}
 
-    public abstract static class Base<G extends Getters<G, P> , P extends Point.Getters<P> & ClosedType> implements Getters<G,P>  {
+    public abstract static class Base<G extends Getters<G, P> , P extends Point.Getters<P> & Value.CT> implements Getters<G,P>  {
         @Override
         public boolean contains(Point.Getters<?> point) {
             double lat = point.getLat();
@@ -44,8 +46,8 @@ public class Bounds {
     }
     public abstract static class BaseWrite<
             A extends BaseWrite<A,G,P>,
-            G extends Getters<G,P> & ClosedType,
-            P extends Point.Getters<P> & ClosedType
+            G extends Getters<G,P> & Value.CT,
+            P extends Point.Getters<P> & Value.CT
         > extends Base<A,P> implements Aggregate<A,G,P> {
         abstract void setEast (double east);
         abstract void setNorth(double north);

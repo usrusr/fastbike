@@ -199,31 +199,55 @@ public abstract class Coordinate<
         private double lat;
         private double lng;
 
-        @Override public double getLat() {
+        @Override final public double getLat() {
             return lat;
         }
-        @Override public double getLng() {
+        @Override final public double getLng() {
             return lng;
         }
-        @Override public void setLat(double latitude) {
+        @Override final public void setLat(double latitude) {
             this.lat = latitude;
         }
-        @Override public void setLng(double longitude) {
+        @Override final public void setLng(double longitude) {
             this.lng = longitude;
         }
 
     }
 
-    static class Var extends Varing<Var> {
-        @Override
-        public Var read() {
-            return this;
-        }
+    protected abstract static class VaringAggregate<A extends VaringAggregate<A,R> & Merging<R,A,A>, R extends Reading<R>> extends Value.VaringAggregate<A,R> implements Merging<R,A,A> {
+        private double west;
+        private double north;
+        private double east;
+        private double south;
 
-        @Override
-        public Var write() {
-            return this;
+        @Override final public double getWest() {
+            return west;
         }
+        @Override final public double getNorth() {
+            return north;
+        }
+        @Override final public double getEast() {
+            return east;
+        }
+        @Override final public double getSouth() {
+            return south;
+        }
+        @Override final public void setWest(double west) {
+            this.west = west;
+        }
+        @Override final public void setNorth(double north) {
+            this.north = north;
+        }
+        @Override final public void setEast(double east) {
+            this.east = east;
+        }
+        @Override final public void setSouth(double south) {
+            this.south = south;
+        }
+    }
+
+    static class Var extends Varing<Var> {
+
     }
 
 }
