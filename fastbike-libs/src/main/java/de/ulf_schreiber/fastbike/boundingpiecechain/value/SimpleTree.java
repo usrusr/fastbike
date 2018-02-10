@@ -11,18 +11,22 @@ public class SimpleTree extends Tree<
         SimpleTree.Merging,
         double[],
         SimpleTree.ElementWriter,
-        SimpleTree.AggregateWriter
+        SimpleTree.AggregateWriter,
+        SimpleTree
 > {
 
     public SimpleTree() {
         super(new Meta(0.00001d));
     }
 
-    @Override LeafNode<Meta, Reading, Writing, Grouping, Merging, double[], ElementWriter, AggregateWriter> createLeafNode(Tree<Meta, Reading, Writing, Grouping, Merging, double[], ElementWriter, AggregateWriter> tree, Iterator<Reading> it, Value.Editor<ElementWriter, Reading, Writing, double[]> looker, Merging bounds) {
+
+    @Override
+    LeafNode createLeafNode(SimpleTree tree, Iterator<Reading> it, ElementWriter looker, Merging bounds) {
         return null;
     }
 
-    @Override GroupNode<Meta, Reading, Writing, Grouping, Merging, double[], ElementWriter, AggregateWriter> createGroupNodeNode(Tree<Meta, Reading, Writing, Grouping, Merging, double[], ElementWriter, AggregateWriter> tree, Iterator<Reading> it, Value.Editor<ElementWriter, Reading, Writing, double[]> looker, Value.Editor<AggregateWriter, Grouping, Merging, double[]> groupLooker, Merging bounds, Node<Meta, Reading, Writing, Grouping, Merging, double[], ElementWriter, AggregateWriter, ?> firstChild, int depth) {
+    @Override
+    GroupNode createGroupNodeNode(SimpleTree tree, Iterator<Reading> it, ElementWriter looker, AggregateWriter groupLooker, Merging bounds, Node firstChild, int depth) {
         return null;
     }
 
@@ -142,10 +146,10 @@ public class SimpleTree extends Tree<
             buffer[3] = south;
         }
 
-        @Override public Grouping group() {
+        @Override public Grouping read() {
             return this;
         }
-        @Override public Merging merge() {
+        @Override public Merging write() {
             return this;
         }
     }

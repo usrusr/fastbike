@@ -38,14 +38,14 @@ public abstract class Value<
             R extends Reading<R>,
             G extends Grouping<R,G>
             > {
-        G group();
+        G read();
     }
     interface Merging <
             R extends Reading<R>,
             G extends Grouping<R,G>,
             M extends Merging<R,G,M>
             > extends Grouping<R,G> {
-        M merge();
+        M write();
     }
 
     public interface PublicRead extends Reading<PublicRead> {
@@ -169,6 +169,10 @@ public abstract class Value<
             return this.asEditor();
         }
 
+        final public boolean hasNext(){
+            return index<size;
+        }
+
         final public L moveAbsolute(int next) {
             if(next < 0 || next >= size) throw new IndexOutOfBoundsException();
             index = next;
@@ -184,6 +188,10 @@ public abstract class Value<
         }
 
         public abstract B createBuffer(int blocksize);
+
+        public abstract W write();
+
+        public abstract R read();
     }
 
 
@@ -199,11 +207,11 @@ public abstract class Value<
     }
     protected abstract static class VaringAggregate<A extends VaringAggregate<A,R> & Merging<R,A,A>, R extends Reading<R>> implements Merging<R,A,A> {
         @SuppressWarnings("unchecked")
-        @Override public final A group() {
+        @Override public final A read() {
             return (A) this;
         }
         @SuppressWarnings("unchecked")
-        @Override public A merge() {
+        @Override public A write() {
             return (A) this;
         }
     }
