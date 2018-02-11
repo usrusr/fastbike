@@ -85,7 +85,7 @@ public abstract class Value<
 ////         * @param buffer
 ////         * @param offset extra single bytes
 ////         */
-////        L wrap(B buffer, int bufferSize, int offset);
+////        L skip(B buffer, int bufferSize, int offset);
 ////        L moveRelative(int direction);
 ////        L moveAbsolute(int next);
 ////        /** @return highest allowed index+1*/
@@ -170,7 +170,7 @@ public abstract class Value<
         }
 
         final public boolean hasNext(){
-            return index<size;
+            return index<size-1;
         }
 
         final public L moveAbsolute(int next) {
@@ -195,24 +195,33 @@ public abstract class Value<
     }
 
 
-    protected abstract static class Varing<V extends Varing<V> & Writing<V,V>> implements Writing<V,V> {
+    protected abstract static class Varing<
+            R extends Reading<R>,
+            W extends Writing<R, W>,
+            V extends Varing<R, W, V> & Writing<R,W>
+        > implements Writing<R,W> {
         @SuppressWarnings("unchecked")
-        @Override public final V read() {
-            return (V) this;
+        @Override public final R read() {
+            return (R) this;
         }
         @SuppressWarnings("unchecked")
-        @Override public final V write() {
-            return (V) this;
+        @Override public final W write() {
+            return (W) this;
         }
     }
-    protected abstract static class VaringAggregate<A extends VaringAggregate<A,R> & Merging<R,A,A>, R extends Reading<R>> implements Merging<R,A,A> {
+    protected abstract static class VaringAggregate<
+            R extends Reading<R>,
+            G extends Grouping<R, G>,
+            M extends Merging<R, G, M>,
+            A extends VaringAggregate<R, G, M, A> & Merging<R,G,M>
+            > implements Merging<R,G,M>, Grouping<R,G> {
         @SuppressWarnings("unchecked")
-        @Override public final A read() {
-            return (A) this;
+        @Override public final G read() {
+            return (G) this;
         }
         @SuppressWarnings("unchecked")
-        @Override public A write() {
-            return (A) this;
+        @Override public M write() {
+            return (M) this;
         }
     }
 }

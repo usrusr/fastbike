@@ -195,7 +195,11 @@ public abstract class Coordinate<
 //        }
 //    }
 
-    protected abstract static class Varing<V extends Varing<V>> extends Value.Varing<V> implements Writing<V,V> {
+    protected abstract static class Varing<
+            R extends Reading<R>,
+            W extends Writing<R,W>,
+            V extends Varing<R,W,V>
+        > extends Value.Varing<R,W,V> implements Writing<R,W> {
         private double lat;
         private double lng;
 
@@ -214,7 +218,12 @@ public abstract class Coordinate<
 
     }
 
-    protected abstract static class VaringAggregate<A extends VaringAggregate<A,R> & Merging<R,A,A>, R extends Reading<R>> extends Value.VaringAggregate<A,R> implements Merging<R,A,A> {
+    protected abstract static class VaringAggregate<
+            R extends Reading<R>,
+            G extends Grouping<R, G>,
+            M extends Merging<R, G, M>,
+            A extends VaringAggregate<R, G, M, A> & Merging<R,G,M>
+           > extends Value.VaringAggregate<R, G, M, A> implements Merging<R,G,M> {
         private double west;
         private double north;
         private double east;
@@ -244,10 +253,6 @@ public abstract class Coordinate<
         @Override final public void setSouth(double south) {
             this.south = south;
         }
-    }
-
-    static class Var extends Varing<Var> {
-
     }
 
 }

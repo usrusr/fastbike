@@ -1,10 +1,10 @@
 package de.ulf_schreiber.fastbike.boundingpiecechain.value;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.ListIterator;
 
 public abstract class Tree<
@@ -50,28 +50,15 @@ public abstract class Tree<
 
         B array;
         int elements = 0;
-        abstract void build(T.BoundingBuilder builder);
+        abstract void build(BoundingBuilder builder);
         abstract int depth();
 
         protected abstract void calculateNext(NodeIterator state, double skip);
     }
-    abstract class LeafNode
-//            <
-//            V extends CoordinateDistance<R,W,G,M>,
-//            R extends CoordinateDistance.Reading<R>,
-//            W extends CoordinateDistance.Writing<R,W> & CoordinateDistance.Reading<R>,
-//            G extends CoordinateDistance.Grouping<R,G>,
-//            M extends CoordinateDistance.Merging<R,G,M> & CoordinateDistance.Grouping<R,G>,
-//            B,
-//            L extends Value.Editor<L,R,W,B>,
-//            A extends Value.Editor<A,G,M,B>
-//    >
-            extends Node<LeafNode> {
+    class LeafNode extends Node<LeafNode> {
 
 
-        LeafNode(T tree, Iterator<R> it, L elemLooker, M mutableBoundsReturn) {
-            final int blocksize = tree.blocksize;
-            final V meta = tree.meta;
+        LeafNode(Iterator<? extends R> it, L elemLooker, M mutableBoundsReturn) {
             array = elemLooker.createBuffer(blocksize);
             elemLooker.wrap(array, blocksize,0);
             while(it.hasNext() && elements < blocksize){
@@ -85,7 +72,7 @@ public abstract class Tree<
 
         @Override int depth() { return 0; }
         @Override
-        public void build(T.BoundingBuilder builder) {
+        public void build(BoundingBuilder builder) {
             V meta = builder.tree().meta;
             final double precision = meta.precision;
             if(builder.toVisit < precision) return;
@@ -118,12 +105,14 @@ public abstract class Tree<
         protected void calculateNext(NodeIterator state, double skip) {
             state.leaf=this; // for next iteration
             L looker = state.valueLooker;
-            looker.wrap(array, elements, 0).moveAbsolute(state.doneInCur);
-            while(skip>meta.precision){
-                state.doneInCur++;
-                skip -= looker.moveRelative(1).read().getDistance();
-            }
+            if(state.doneInCur < elements) {
+                looker.wrap(array, elements, 0).moveAbsolute(state.doneInCur);
 
+                while (skip > meta.precision) {
+                    state.doneInCur++;
+                    skip -= looker.moveRelative(1).read().getDistance();
+                }
+            }
             if(state.doneInCur>=elements){
                 int stackDepth = state.grpstack.size();
                 int idx = stackDepth -1;
@@ -148,27 +137,19 @@ public abstract class Tree<
                     }
                     idx--;
                 }
-                if(idx<0){
+//                if(idx<0){
                     // EOT
-                    state.next=null;
-                    return;
-                }
+                state.next=null;
+                return;
+//                }
             }
-            state.next = looker.moveRelative(1).read();
+            state.next = looker.read();
+            if(looker.hasNext()) looker.moveRelative(1);
             state.doneInCur++;
         }
     }
-//    abstract static class GroupNode<
-//            V extends CoordinateDistance<R,W,G,M>,
-//            R extends CoordinateDistance.Reading<R>,
-//            W extends CoordinateDistance.Writing<R,W> & CoordinateDistance.Reading<R>,
-//            G extends CoordinateDistance.Grouping<R,G>,
-//            M extends CoordinateDistance.Merging<R,G,M> & CoordinateDistance.Grouping<R,G>,
-//            B,
-//            L extends Value.Editor<L,R,W,B>,
-//            A extends Value.Editor<A,G,M,B>
-//        > extends Node<V,R,W,G,M,B,L,A,GroupNode> {
-    abstract class GroupNode extends Node<GroupNode> {
+
+    class GroupNode extends Node<GroupNode> {
 
 
         Node<?>[] children;
@@ -180,10 +161,9 @@ public abstract class Tree<
             return depth;
         }
 
-        GroupNode(T tree, Iterator<R> it, L elemLooker, A groupLooker, M mutableBoundsReturn, Node<?> firstChild, int depth){
-            children = new Node[tree.blocksize];
-            array = groupLooker.createBuffer(tree.blocksize);
-            final V meta = tree.meta;
+        GroupNode(Iterator<? extends R> it, L elemLooker, A groupLooker, M mutableBoundsReturn, Node<?> firstChild, int depth){
+            children = new Node[blocksize];
+            array = groupLooker.createBuffer(blocksize);
             this.depth = depth;
 
             groupLooker.wrap(array, 0, 0);
@@ -197,15 +177,15 @@ public abstract class Tree<
                 meta.extendBy(groupLookerWrite, mutableBoundsReturnRead);
             }
 
-            while(it.hasNext() && elements<tree.blocksize){
+            while(it.hasNext() && elements<blocksize){
                 Node<?> newNode;
 
                 if(depth==1){
                     groupLooker.moveAbsolute(elements);
-                    newNode = tree.createLeafNode(tree, it, elemLooker, groupLookerWrite);
+                    newNode = new LeafNode(it, elemLooker, groupLookerWrite);
                 } else {
                     meta.clearMerge(mutableBoundsReturn);
-                    newNode = tree.createGroupNodeNode(tree, it, elemLooker, groupLooker, mutableBoundsReturn, null, depth-1);
+                    newNode = new GroupNode(it, elemLooker, groupLooker, mutableBoundsReturn, null, depth-1);
                     groupLooker.wrap(array, elements, 0);
                     meta.clearMerge(groupLookerWrite);
                     meta.extendBy(groupLookerWrite, mutableBoundsReturnRead);
@@ -223,7 +203,7 @@ public abstract class Tree<
         }
 
         @Override
-        public void build(T.BoundingBuilder builder) {
+        public void build(BoundingBuilder builder) {
             V meta = builder.tree().meta;
             final double precision = meta.precision;
             if(builder.toVisit < precision) return;
@@ -253,53 +233,26 @@ public abstract class Tree<
             }
         }
 
-    @Override
-    protected void calculateNext(NodeIterator state, double skip) {
-        A looker = state.groupLooker;
-        looker.wrap(array, elements, 0);
-        for(int i=0;i<elements;i++){
-            double childLen = looker.read().getDistance();
-            if(childLen +meta.precision > skip){
-                Node<?> child = children[i];
-                state.doneInCur=0;
-                state.grpstack.add(this);
+        @Override
+        protected void calculateNext(NodeIterator state, double skip) {
+            A looker = state.groupLooker;
+            looker.wrap(array, elements, 0);
+            for(int i=0;i<elements;i++){
+                double childLen = looker.read().getDistance();
+                if(childLen +meta.precision > skip){
+                    Node<?> child = children[i];
+                    state.doneInCur=0;
+                    state.grpstack.add(this);
 
-                state.idxstack.add(i);
+                    state.idxstack.add(i);
 
-                child.calculateNext(state, skip);
-                return;
+                    child.calculateNext(state, skip);
+                    return;
+                }
+                skip -= childLen;
+                looker.moveRelative(1);
             }
-            skip -= childLen;
-            looker.moveRelative(1);
         }
-    }
-}
-    class Segment {
-        final Node<?> root;
-        final G bounds;
-
-        Segment(Node<?> root, G bounds) {
-            this.root = root;
-            this.bounds = bounds;
-        }
-    }
-    abstract LeafNode createLeafNode(T tree, Iterator<R> it, L looker, M bounds);
-    abstract GroupNode createGroupNodeNode(T tree, Iterator<R> it, L looker, A groupLooker, M bounds, Node firstChild, int depth);
-
-    Segment makeTree(Iterable<R> iterable){
-        L elemLooker = meta.<L,B>createElementWriter();
-        A groupLooker = meta.<A,B>createAggregateWriter();
-        Iterator<R> it = iterable.iterator();
-        M mutableBounds = meta.createMutableBounds();
-        LeafNode first = createLeafNode(self(), it, elemLooker, mutableBounds);
-        Node root = first;
-        int depth = 0;
-        while(it.hasNext()){
-            depth++;
-            root = createGroupNodeNode(self(), it, elemLooker, groupLooker, mutableBounds, root, depth);
-        }
-
-        return new Segment(root, mutableBounds.read());
     }
 
     protected T self(){
@@ -310,47 +263,64 @@ public abstract class Tree<
      * wraps a node, either whole or a subset (this way, multiple pieces can use the same immutable tree, for when a piece is cut)
      */
     class Piece {
-        G bounds;
+        final G bounds;
         final Node<?> root;
         final double offset; // length is contained in bounds
-        Piece(Node<?> root, double offset, double distance, T tree) {
+        Piece(Node<?> root, double offset, double distance) {
             this.root = root;
             this.offset = offset;
 
-            T.BoundingBuilder boundingBuilder = tree.new BoundingBuilder(offset, distance);
+            BoundingBuilder boundingBuilder = new BoundingBuilder(offset, distance);
             root.build(boundingBuilder);
             bounds = boundingBuilder.result.read();
         }
-    }
-    class Undo<
-            V extends CoordinateDistance<R,W,G,M>,
-            R extends CoordinateDistance.Reading<R>,
-            W extends CoordinateDistance.Writing<R,W> & CoordinateDistance.Reading<R>,
-            G extends CoordinateDistance.Grouping<R,G>,
-            M extends CoordinateDistance.Merging<R,G,M> & CoordinateDistance.Grouping<R,G>,
-            B,
-            L extends Value.Editor<L,R,W,B>,
-            A extends Value.Editor<A,G,M,B>
-            > {
-        int wrap;
-        int removed; // first n pieces are removed, rest added
-        Piece[] pieces;
 
-        final void apply(T tree) {
-            ListIterator<Piece> iterator = tree.pieces.listIterator(wrap);
-            int i = 0;
-            for (; i < removed; i++) iterator.remove();
-            int length = pieces.length;
-            for (; i < length; i++) iterator.add(pieces[i]);
+        Piece(Iterable<? extends R> iterable){
+            L elemLooker = meta.<L,B>createElementWriter();
+            A groupLooker = meta.<A,B>createAggregateWriter();
+            Iterator<? extends R> it = iterable.iterator();
+            M mutableBounds = meta.createMutableBounds();
+            LeafNode first = new LeafNode(it, elemLooker, mutableBounds);
+            Node tmpRoot = first;
+            int depth = 0;
+            while(it.hasNext()){
+                depth++;
+                tmpRoot = new GroupNode(it, elemLooker, groupLooker, mutableBounds, tmpRoot, depth);
+            }
+            root = tmpRoot;
+            offset = 0;
+            bounds = mutableBounds.read();
         }
 
-        final void unapply(T tree) {
-            ListIterator<Piece> iterator = tree.pieces.listIterator(wrap);
+    }
+    class Undo{
+        final int skip;
+        final int removed; // first n pieces are removed, rest added
+        final List<Piece> pieces;
+
+        Undo(int skip, List<Piece> toRemoveList, List<Piece> toAddList) {
+            this.skip = skip;
+            pieces = new ArrayList<>(toRemoveList.size()+toAddList.size());
+            this.removed = toRemoveList.size();
+            pieces.addAll(toRemoveList);
+            pieces.addAll(toAddList);
+        }
+
+        final void apply() {
+            ListIterator<Piece> iterator = Tree.this.pieces.listIterator(skip);
+            int i = 0;
+            for (; i < removed; i++) iterator.remove();
+            int length = pieces.size();
+            for (; i < length; i++) iterator.add(pieces.get(i));
+        }
+
+        final void unapply() {
+            ListIterator<Piece> iterator = Tree.this.pieces.listIterator(skip);
             int i = removed;
-            int length = pieces.length;
+            int length = pieces.size();
             for (; i < length; i++) iterator.remove();
 
-            for (i = 0; i < removed; i++) iterator.add(pieces[i]);
+            for (i = 0; i < removed; i++) iterator.add(pieces.get(i));
         }
     }
 
@@ -381,14 +351,56 @@ public abstract class Tree<
     public void append(Iterable<? extends R> points){
         replace(Double.MAX_VALUE, 0, points);
     }
-    public void insert(double wrap, Iterable<? extends R> points){
-        replace(wrap, 0, points);
+    public void insert(double from, Iterable<? extends R> points){
+        replace(from, 0, points);
     }
     public void delete(double wrap, double distance){
         replace(wrap, distance, Collections.<R>emptyList());
     }
-    public void replace(double wrap, double distance, Iterable<? extends R> points){
+    public void replace(double from, double distance, Iterable<? extends R> points){
+        List<Piece> toRemoveList = new ArrayList<>();
+        List<Piece> toAddList = new ArrayList<>();
 
+        int undoSkip = 0;
+        if(from<Double.MAX_VALUE){
+            double toSkip = from;
+            double toRemove = distance;
+            ListIterator<Piece> pit = pieces.listIterator();
+            while(pit.hasNext()){
+                Piece cur = pit.next();
+                double plen = cur.bounds.getDistance();
+                if(plen < toSkip  + meta.precision){
+                    undoSkip++;
+                    toSkip-=plen;
+                }else{
+                    pit.previous(); // add cur to toRemoveList in the next while loop
+                    if(toSkip > meta.precision){
+                        // add partial copy of first removed
+                        toAddList.add(new Piece(cur.root, 0, toSkip));
+                    }
+                    break;
+                }
+            }
+            toAddList.add(new Piece(points));
+            while(pit.hasNext() && toRemove > meta.precision){
+                Piece cur = pit.next();
+                double plen = cur.bounds.getDistance();
+                toRemove -= plen - toSkip;
+                toSkip = 0;
+                toRemoveList.add(cur);
+                if(toRemove < -meta.precision){
+                    double restToAdd = -toRemove;
+                    toAddList.add(new Piece(cur.root, plen-restToAdd, restToAdd));
+                }
+            }
+        }else{
+            undoSkip = pieces.size();
+            toAddList.add(new Piece(points));
+        }
+
+        Undo undo = new Undo(undoSkip, toRemoveList, toAddList);
+        undo.apply();
+        undos.add(undo);
     }
 
 
@@ -424,13 +436,14 @@ public abstract class Tree<
     @Override
     public Iterator<R> iterator() {
         return new Iterator<R>() {
-            R next = calcNext();
             Iterator<Piece> pieceIt = pieces.iterator();
             Piece currentPiece = null;
             double currentPieceDistLeft = 0;
 
             NodeIterator nodeIt = new NodeIterator();
             double curNodeDone = 0;
+
+            R next = calcNext();
 
             protected R calcNext(){
                 while(pieceIt.hasNext() && ! nodeIt.hasNext()){

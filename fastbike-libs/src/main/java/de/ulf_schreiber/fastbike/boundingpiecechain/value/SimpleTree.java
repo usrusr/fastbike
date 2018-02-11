@@ -20,28 +20,18 @@ public class SimpleTree extends Tree<
     }
 
 
-    @Override
-    LeafNode createLeafNode(SimpleTree tree, Iterator<Reading> it, ElementWriter looker, Merging bounds) {
-        return null;
-    }
-
-    @Override
-    GroupNode createGroupNodeNode(SimpleTree tree, Iterator<Reading> it, ElementWriter looker, AggregateWriter groupLooker, Merging bounds, Node firstChild, int depth) {
-        return null;
-    }
-
     static class Meta extends CoordinateDistance<Reading,Writing,Grouping,Merging>{
         public Meta(double precision) {
             super(precision);
         }
         @Override ElementWriter createElementWriter() {
-            return null;
+            return new ElementWriter();
         }
         @Override AggregateWriter createAggregateWriter() {
-            return null;
+            return new AggregateWriter();
         }
         @Override SimpleTree.Merging createMutableBounds() {
-            return null;
+            return new MutableBounds().write();
         }
     }
     interface Reading extends CoordinateDistance.Reading<Reading> {
@@ -53,20 +43,23 @@ public class SimpleTree extends Tree<
     interface Merging extends CoordinateDistance.Merging<Reading,Grouping,Merging>, CoordinateDistance.Grouping<Reading,Grouping>{
     }
 
-    static class MutableBounds extends CoordinateDistance.VaringAggregate<MutableBounds, Reading>{
+    static class MutableBounds extends CoordinateDistance.VaringAggregate<
+            Reading, Grouping, Merging, MutableBounds
+    >implements Merging{
+
+    }
+    static class MutableVal extends CoordinateDistance.Varing<
+            Reading, Writing, MutableVal
+            >{
 
     }
 
-    static class ElementWriter
+    static final class ElementWriter
             extends Value.Editor<ElementWriter,Reading,Writing,double[]>
             implements Writing, Reading
     {
-        /**
-         * @param size       bytes per element (as determined by implementors)
-         * @param fieldLimit
-         */
-        protected ElementWriter(int size, int fieldLimit) {
-            super(size, fieldLimit);
+        protected ElementWriter() {
+            super(3, 3);
         }
 
         @Override
@@ -74,22 +67,22 @@ public class SimpleTree extends Tree<
             return new double[blocksize * 3];
         }
         @Override public void setDistance(double distance) {
-            buffer[2] = distance;
+            buffer[actualIndex + 2] = distance;
         }
         @Override public void setLat(double latitude) {
-            buffer[0] = latitude;
+            buffer[actualIndex + 0] = latitude;
         }
         @Override public void setLng(double longitude) {
-            buffer[1] = longitude;
+            buffer[actualIndex + 1] = longitude;
         }
         @Override public double getDistance() {
-            return buffer[2];
+            return buffer[actualIndex + 2];
         }
         @Override public double getLat() {
-            return buffer[0];
+            return buffer[actualIndex + 0];
         }
         @Override public double getLng() {
-            return buffer[1];
+            return buffer[actualIndex + 1];
         }
         @Override public Reading read() {
             return this;
@@ -98,52 +91,48 @@ public class SimpleTree extends Tree<
             return this;
         }
     }
-    static class AggregateWriter extends Value.Editor<SimpleTree.AggregateWriter, Grouping, Merging, double[]> implements Grouping, Merging {
-        /**
-         * @param size       bytes per element (as determined by implementors)
-         * @param fieldLimit
-         */
-        protected AggregateWriter(int size, int fieldLimit) {
-            super(size, fieldLimit);
+    static final class AggregateWriter extends Value.Editor<SimpleTree.AggregateWriter, Grouping, Merging, double[]> implements Grouping, Merging {
+        protected AggregateWriter() {
+            super(5, 5);
         }
 
         @Override
         public double[] createBuffer(int blocksize) {
-            return new double[blocksize * 3];
+            return new double[blocksize * 5];
         }
 
         @Override public double getDistance() {
-            return buffer[4];
+            return buffer[actualIndex + 4];
         }
         @Override public double getWest() {
-            return buffer[0];
+            return buffer[actualIndex + 0];
         }
         @Override public double getNorth() {
-            return buffer[1];
+            return buffer[actualIndex + 1];
         }
         @Override public double getEast() {
-            return buffer[2];
+            return buffer[actualIndex + 2];
         }
         @Override public double getSouth() {
-            return buffer[3];
+            return buffer[actualIndex + 3];
         }
 
 
 
         @Override public void setDistance(double distance) {
-            buffer[4] = distance;
+            buffer[actualIndex + 4] = distance;
         }
         @Override public void setWest(double west) {
-            buffer[0] = west;
+            buffer[actualIndex + 0] = west;
         }
         @Override public void setNorth(double north) {
-            buffer[1] = north;
+            buffer[actualIndex + 1] = north;
         }
         @Override public void setEast(double east) {
-            buffer[2] = east;
+            buffer[actualIndex + 2] = east;
         }
         @Override public void setSouth(double south) {
-            buffer[3] = south;
+            buffer[actualIndex + 3] = south;
         }
 
         @Override public Grouping read() {

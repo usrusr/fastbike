@@ -99,7 +99,11 @@ abstract public class CoordinateDistance<
 //        }
 //    }
 
-    protected abstract static class Varing<V extends Varing<V>> extends Coordinate.Varing<V> implements Writing<V,V> {
+    protected abstract static class Varing<
+            R extends Reading<R>,
+            W extends Writing<R, W>,
+            V extends Varing<R,W,V>
+        > extends Coordinate.Varing<R,W,V> implements Writing<R,W> {
         private double distance;
 
         @Override
@@ -113,7 +117,12 @@ abstract public class CoordinateDistance<
         }
     }
 
-    protected abstract static class VaringAggregate<A extends VaringAggregate<A,R> & Merging<R,A,A>, R extends Reading<R>> extends Coordinate.VaringAggregate<A,R> implements Merging<R,A,A> {
+    protected abstract static class VaringAggregate<
+            R extends Reading<R>,
+            G extends Grouping<R, G>,
+            M extends Merging<R, G, M>,
+            A extends VaringAggregate<R, G, M, A> & Merging<R,G,M>
+        > extends Coordinate.VaringAggregate<R, G, M, A> implements Merging<R,G,M> {
         private double distance;
         @Override public double getDistance() {
             return distance;
@@ -125,8 +134,4 @@ abstract public class CoordinateDistance<
     }
 
 
-
-    static class Var extends Varing<Var> {
-
-    }
 }

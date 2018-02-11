@@ -3,15 +3,26 @@ package de.ulf_schreiber.fastbike.boundingpiecechain.value;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class SimpleTreeTest {
     @Test public void test(){
         SimpleTree tree = new SimpleTree();
-        
-        tree.append(line(0,0,10,0, 1));
 
-        System.out.println("tree: "+tree);
+        List<Point> line = line(0, 0, 10, 0, 1);
+        tree.append(line);
+
+        Iterator<SimpleTree.Reading> iterator = tree.iterator();
+
+        StringBuilder sb = new StringBuilder();
+
+        while(iterator.hasNext()){
+            sb.setLength(0);
+            tree.stringifyPoint(sb, iterator.next());
+
+            System.out.println(" "+sb);
+        }
 
     }
 
