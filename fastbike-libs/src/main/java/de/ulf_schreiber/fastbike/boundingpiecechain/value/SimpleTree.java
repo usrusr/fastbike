@@ -33,6 +33,9 @@ public class SimpleTree extends Tree<
         @Override SimpleTree.Merging createMutableBounds() {
             return new MutableBounds().write();
         }
+        @Override SimpleTree.Writing createMutableVal() {
+            return new MutableVal().write();
+        }
     }
     interface Reading extends CoordinateDistance.Reading<Reading> {
     }
@@ -45,12 +48,12 @@ public class SimpleTree extends Tree<
 
     static class MutableBounds extends CoordinateDistance.VaringAggregate<
             Reading, Grouping, Merging, MutableBounds
-    >implements Merging{
+    > implements Merging{
 
     }
     static class MutableVal extends CoordinateDistance.Varing<
             Reading, Writing, MutableVal
-            >{
+    > implements Writing{
 
     }
 

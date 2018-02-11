@@ -53,7 +53,7 @@ public abstract class Tree<
         abstract void build(BoundingBuilder builder);
         abstract int depth();
 
-        protected abstract void calculateNext(NodeIterator state, double skip);
+        protected abstract boolean calculateNext(NodeIterator state, double skip);
     }
     class LeafNode extends Node<LeafNode> {
 
@@ -102,7 +102,7 @@ public abstract class Tree<
         }
 
         @Override
-        protected void calculateNext(NodeIterator state, double skip) {
+        protected boolean calculateNext(NodeIterator state, double skip) {
             state.leaf=this; // for next iteration
             L looker = state.valueLooker;
             if(state.doneInCur < elements) {
@@ -133,19 +133,19 @@ public abstract class Tree<
                         state.doneInCur = 0;
                         LeafNode cast = LeafNode.class.cast(child);
                         cast.calculateNext(state, skip);
-                        return;
+                        return false;
                     }
                     idx--;
                 }
 //                if(idx<0){
                     // EOT
-                state.next=null;
-                return;
+                return false;
 //                }
             }
-            state.next = looker.read();
+            meta.copy(looker.read(), state.next);
             if(looker.hasNext()) looker.moveRelative(1);
             state.doneInCur++;
+            return true;
         }
     }
 
@@ -234,7 +234,7 @@ public abstract class Tree<
         }
 
         @Override
-        protected void calculateNext(NodeIterator state, double skip) {
+        protected boolean calculateNext(NodeIterator state, double skip) {
             A looker = state.groupLooker;
             looker.wrap(array, elements, 0);
             for(int i=0;i<elements;i++){
@@ -246,12 +246,12 @@ public abstract class Tree<
 
                     state.idxstack.add(i);
 
-                    child.calculateNext(state, skip);
-                    return;
+                    return child.calculateNext(state, skip);
                 }
                 skip -= childLen;
                 looker.moveRelative(1);
             }
+            return false;
         }
     }
 
@@ -443,25 +443,28 @@ public abstract class Tree<
             NodeIterator nodeIt = new NodeIterator();
             double curNodeDone = 0;
 
-            R next = calcNext();
+            final W next = Tree.this.meta.createMutableVal();
+            final W cur = Tree.this.meta.createMutableVal();
+            boolean hasNext = calcNext();
 
-            protected R calcNext(){
+            protected boolean calcNext(){
                 while(pieceIt.hasNext() && ! nodeIt.hasNext()){
                     currentPiece=pieceIt.next();
                     currentPieceDistLeft=currentPiece.bounds.getDistance();
                     nodeIt.reset(currentPiece.root, currentPiece.offset, currentPiece.bounds.getDistance());
                 }
-                if( ! nodeIt.hasNext()) return null;
-                return nodeIt.next();
+                if( ! nodeIt.hasNext()) return false;
+                meta.copy(nodeIt.next(), next);
+                return true;
             }
             @Override public boolean hasNext() {
-                return next!=null;
+                return hasNext;
             }
 
             @Override public R next() {
-                R ret = this.next;
-                next = calcNext();
-                return ret;
+                meta.copy(next.read(), cur);
+                hasNext = calcNext();
+                return cur.read();
             }
 
             @Override public void remove() {
@@ -474,10 +477,12 @@ public abstract class Tree<
         protected ArrayList<Integer> idxstack = new ArrayList<>();
         protected LeafNode leaf;
         protected double remaining;
-        protected R next;
+        final private W next = meta.createMutableVal();
+        final private W cur = meta.createMutableVal();
         L valueLooker = meta.<L,B>createElementWriter();
         A groupLooker = meta.<A,B>createAggregateWriter();
         protected int doneInCur = 0;
+        private boolean hasNext = false;
 
         void reset(Node root, double skip, double total){
             grpstack.ensureCapacity(root.depth());
@@ -485,20 +490,20 @@ public abstract class Tree<
             grpstack.clear();
             idxstack.clear();
             remaining = total;
-            root.calculateNext(this, skip);
+            hasNext = root.calculateNext(this, skip);
         }
 
         @Override
         public boolean hasNext() {
-            return next!=null && remaining>-meta.precision;
+            return hasNext && remaining>-meta.precision;
         }
 
         @Override
         public R next() {
-            R ret = next;
-            remaining-=ret.getDistance();
-            leaf.calculateNext(this, 0);
-            return ret;
+            meta.copy(next.read(), cur);
+            remaining-=cur.getDistance();
+            hasNext = leaf.calculateNext(this, 0);
+            return cur.read();
         }
         @Override public void remove() {
             throw new UnsupportedOperationException();

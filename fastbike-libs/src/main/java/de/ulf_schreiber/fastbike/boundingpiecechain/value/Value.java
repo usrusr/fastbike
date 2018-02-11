@@ -80,18 +80,6 @@ public abstract class Value<
         if(Double.isNaN(b)) return a;
         return Math.min(a,b);
     }
-//    public interface BufferNav<L extends BufferNav<L,X,B>,X,B>  {
-////        /**
-////         * @param buffer
-////         * @param offset extra single bytes
-////         */
-////        L skip(B buffer, int bufferSize, int offset);
-////        L moveRelative(int direction);
-////        L moveAbsolute(int next);
-////        /** @return highest allowed index+1*/
-////        int size();
-////        B createBuffer(int elements);
-//    }
 
     /**
      * must not be implemented in classes intended to be extended
@@ -99,6 +87,7 @@ public abstract class Value<
     abstract <L extends Editor<L,R,W,B>, B> L createElementWriter();
     abstract <L extends Editor<L,G,M,B>, B> L createAggregateWriter();
     abstract M createMutableBounds();
+    abstract W createMutableVal();
 
     void stringifyPoint(Appendable sw, R point){
         try {
@@ -111,20 +100,6 @@ public abstract class Value<
             e.printStackTrace();
         }
     }
-
-    /**
-     * heavy, provided by operation not by storage
-     */
-    interface EditorI<L extends Editor<L,R,W,B> & EditorI<L,R,W,B>,R,W,B>  {
-        L wrap(B buffer, int elements, int offset);
-        L moveRelative(int direction);
-        L moveAbsolute(int next);
-        B createBuffer(int elements);
-        R read();
-        W write();
-    }
-//
-//    static abstract class BufferNav<L extends BufferNav<L,R,W,B>,R,W,B> implements Editor<L,R,W,B>{
 
     static abstract class Editor<L extends Editor<L,R,W,B>,R,W,B>  {
         protected final int weight;
@@ -145,7 +120,7 @@ public abstract class Value<
 
 
         @SuppressWarnings("unchecked")
-        private final L asEditor(){
+        private L asEditor(){
             return (L) this;
         }
         final public L wrap(B buffer, int elements, int offset) {
