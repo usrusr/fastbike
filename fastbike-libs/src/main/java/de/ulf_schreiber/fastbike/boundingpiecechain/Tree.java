@@ -390,36 +390,6 @@ public final class Tree<
         redos.clear();
     }
 
-
-//
-//    /** @return new root or self (will always return self if called with parent) */
-//    Node<R,T,?> extendTree(GroupNode<R,T> group, GroupNode<R,T> parent, Iterator<Step> iterator, R looker){
-//        GroupNode<R, T> cur = group;
-//        while(iterator.hasNext()) {
-//            if (cur.len == this.blocksize) {
-//                if(parent==null){
-//                    GroupNode<R, T> newParent = new GroupNode<>(this);
-//                    newParent.add(cur);
-//                    return extendTree(newParent, null, iterator, looker);
-//                }else {
-//                    // continue in parent call
-//                    return group;
-//                }
-//            }
-//            if(cur.containsLeaves){
-//                LeafNode<R, T> newChild = new LeafNode<>(this, iterator, looker);
-//
-//                cur.add(newChild);
-//            }else{
-//                GroupNode<R, T> newChild = new GroupNode<>(this);
-//                extendTree(newChild, cur, iterator, looker);
-//                cur.add(newChild);
-//            }
-//        }
-//        return group;
-//    }
-//
-
     @Override
     public Iterator<R> iterator() {
         return new Iterator<R>() {
