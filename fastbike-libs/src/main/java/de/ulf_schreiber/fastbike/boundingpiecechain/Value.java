@@ -1,4 +1,4 @@
-package de.ulf_schreiber.fastbike.boundingpiecechain.value;
+package de.ulf_schreiber.fastbike.boundingpiecechain;
 
 
 import java.io.IOException;
@@ -14,7 +14,10 @@ public abstract class Value<
         R extends Value.Reading<R>,
         W extends Value.Writing<R,W> & Value.Reading<R>,
         G extends Value.Grouping<R,G>,
-        M extends Value.Merging<R,G,M> & Value.Grouping<R,G>
+        M extends Value.Merging<R,G,M> & Value.Grouping<R,G>,
+        B,
+        L extends Value.Editor<L,R,W,B>,
+        A extends Value.Editor<A,G,M,B>
         >{
 
     protected final double precision;
@@ -84,8 +87,8 @@ public abstract class Value<
     /**
      * must not be implemented in classes intended to be extended
      */
-    abstract <L extends Editor<L,R,W,B>, B> L createElementWriter();
-    abstract <L extends Editor<L,G,M,B>, B> L createAggregateWriter();
+    abstract L createElementWriter();
+    abstract A createAggregateWriter();
     abstract M createMutableBounds();
     abstract W createMutableVal();
 

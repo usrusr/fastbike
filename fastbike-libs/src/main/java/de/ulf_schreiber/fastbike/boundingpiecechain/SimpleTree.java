@@ -1,42 +1,39 @@
-package de.ulf_schreiber.fastbike.boundingpiecechain.value;
+package de.ulf_schreiber.fastbike.boundingpiecechain;
 
 
-import java.util.Iterator;
-
-public class SimpleTree extends Tree<
-        SimpleTree.Meta,
+public class SimpleTree extends CoordinateDistance<
         SimpleTree.Reading,
         SimpleTree.Writing,
         SimpleTree.Grouping,
         SimpleTree.Merging,
         double[],
         SimpleTree.ElementWriter,
-        SimpleTree.AggregateWriter,
-        SimpleTree
-> {
-
-    public SimpleTree() {
-        super(new Meta(0.00001d));
+        SimpleTree.AggregateWriter
+    >{
+    public SimpleTree(double precision) {
+        super(precision);
     }
 
-
-    static class Meta extends CoordinateDistance<Reading,Writing,Grouping,Merging>{
-        public Meta(double precision) {
-            super(precision);
-        }
-        @Override ElementWriter createElementWriter() {
-            return new ElementWriter();
-        }
-        @Override AggregateWriter createAggregateWriter() {
-            return new AggregateWriter();
-        }
-        @Override SimpleTree.Merging createMutableBounds() {
-            return new MutableBounds().write();
-        }
-        @Override SimpleTree.Writing createMutableVal() {
-            return new MutableVal().write();
-        }
+    @Override
+    SimpleTree.ElementWriter createElementWriter() {
+        return new ElementWriter();
     }
+
+    @Override
+    SimpleTree.AggregateWriter createAggregateWriter() {
+        return new AggregateWriter();
+    }
+
+    @Override
+    Merging createMutableBounds() {
+        return new MutableBounds();
+    }
+
+    @Override
+    Writing createMutableVal() {
+        return new MutableVal();
+    }
+
     interface Reading extends CoordinateDistance.Reading<Reading> {
     }
     interface Writing extends CoordinateDistance.Writing<Reading,Writing>, CoordinateDistance.Reading<Reading>{
@@ -59,7 +56,7 @@ public class SimpleTree extends Tree<
 
     static final class ElementWriter
             extends Value.Editor<ElementWriter,Reading,Writing,double[]>
-            implements Writing, Reading
+            implements Reading, Writing
     {
         protected ElementWriter() {
             super(3, 3);

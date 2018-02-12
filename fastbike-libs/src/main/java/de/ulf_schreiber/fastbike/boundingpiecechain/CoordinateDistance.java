@@ -1,11 +1,14 @@
-package de.ulf_schreiber.fastbike.boundingpiecechain.value;
+package de.ulf_schreiber.fastbike.boundingpiecechain;
 
 abstract public class CoordinateDistance<
         R extends CoordinateDistance.Reading<R> & Coordinate.Reading<R>,
         W extends CoordinateDistance.Writing<R,W> & CoordinateDistance.Reading<R> & Coordinate.Writing<R,W>,
         G extends CoordinateDistance.Grouping<R,G> & Coordinate.Grouping<R,G>,
-        M extends CoordinateDistance.Merging<R,G,M> & CoordinateDistance.Grouping<R,G> & Coordinate.Merging<R,G,M>
-        > extends Coordinate<R,W,G,M>{
+        M extends CoordinateDistance.Merging<R,G,M> & CoordinateDistance.Grouping<R,G> & Coordinate.Merging<R,G,M>,
+        B,
+        L extends Value.Editor<L,R,W,B>,
+        A extends Value.Editor<A,G,M,B>
+        > extends Coordinate<R,W,G,M,B,L,A>{
 
     public CoordinateDistance(double precision) {
         super(precision);

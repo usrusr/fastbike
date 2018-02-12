@@ -1,4 +1,4 @@
-package de.ulf_schreiber.fastbike.boundingpiecechain.value;
+package de.ulf_schreiber.fastbike.boundingpiecechain;
 
 /**
  * A copy/paste template for new types
@@ -8,8 +8,11 @@ public abstract class ExampleChild<
         R extends ExampleChild.Reading<R> & ExampleParent.Reading<R>,
         W extends ExampleChild.Writing<R,W> & ExampleChild.Reading<R> & ExampleParent.Writing<R,W>,
         G extends ExampleChild.Grouping<R,G> & ExampleParent.Grouping<R,G>,
-        M extends ExampleChild.Merging<R,G,M> & ExampleChild.Grouping<R,G> & ExampleParent.Merging<R,G,M>
-        > extends ExampleParent<R,W,G,M>{
+        M extends ExampleChild.Merging<R,G,M> & ExampleChild.Grouping<R,G> & ExampleParent.Merging<R,G,M>,
+        B,
+        L extends Value.Editor<L,R,W,B>,
+        A extends Value.Editor<A,G,M,B>
+        > extends ExampleParent<R,W,G,M,B,L,A>{
 
     public ExampleChild(double precision) {
         super(precision);

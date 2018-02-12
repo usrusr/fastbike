@@ -1,5 +1,6 @@
-package de.ulf_schreiber.fastbike.boundingpiecechain.value;
+package de.ulf_schreiber.fastbike.boundingpiecechain;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -7,8 +8,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 
-public abstract class Tree<
-        V extends CoordinateDistance<R,W,G,M>,
+public final class Tree<
+        V extends CoordinateDistance<R,W,G,M,B,L,A>,
         R extends CoordinateDistance.Reading<R>,
         W extends CoordinateDistance.Writing<R,W> & CoordinateDistance.Reading<R>,
         G extends CoordinateDistance.Grouping<R,G>,
@@ -35,18 +36,7 @@ public abstract class Tree<
     }
 
 
-    abstract class Node<
-//            V extends CoordinateDistance<R,W,G,M>,
-//            R extends CoordinateDistance.Reading<R>,
-//            W extends CoordinateDistance.Writing<R,W> & CoordinateDistance.Reading<R>,
-//            G extends CoordinateDistance.Grouping<R,G>,
-//            M extends CoordinateDistance.Merging<R,G,M> & CoordinateDistance.Grouping<R,G>,
-//            B,
-//            L extends Value.Editor<L,R,W,B>,
-//            A extends Value.Editor<A,G,M,B>,
-//            N extends Node<V,R,W,G,M,B,L,A,N>
-            N extends Node<N>
-        > {
+    abstract class Node<N extends Node<N>> {
 
         B array;
         int elements = 0;
@@ -56,8 +46,6 @@ public abstract class Tree<
         protected abstract boolean calculateNext(NodeIterator state, double skip);
     }
     class LeafNode extends Node<LeafNode> {
-
-
         LeafNode(Iterator<? extends R> it, L elemLooker, M mutableBoundsReturn) {
             array = elemLooker.createBuffer(blocksize);
             elemLooker.wrap(array, blocksize,0);
@@ -137,10 +125,7 @@ public abstract class Tree<
                     }
                     idx--;
                 }
-//                if(idx<0){
-                    // EOT
                 return false;
-//                }
             }
             meta.copy(looker.read(), state.next);
             if(looker.hasNext()) looker.moveRelative(1);
@@ -276,8 +261,8 @@ public abstract class Tree<
         }
 
         Piece(Iterable<? extends R> iterable){
-            L elemLooker = meta.<L,B>createElementWriter();
-            A groupLooker = meta.<A,B>createAggregateWriter();
+            L elemLooker = meta.createElementWriter();
+            A groupLooker = meta.createAggregateWriter();
             Iterator<? extends R> it = iterable.iterator();
             M mutableBounds = meta.createMutableBounds();
             LeafNode first = new LeafNode(it, elemLooker, mutableBounds);
@@ -346,8 +331,9 @@ public abstract class Tree<
     }
 
 
-    protected final LinkedList<Piece> pieces = new LinkedList<>();
-    protected final LinkedList<Undo> undos = new LinkedList<>();
+    private final LinkedList<Piece> pieces = new LinkedList<>();
+    private final LinkedList<Undo> undos = new LinkedList<>();
+    private final LinkedList<Undo> redos = new LinkedList<>();
     public void append(Iterable<? extends R> points){
         replace(Double.MAX_VALUE, 0, points);
     }
@@ -401,6 +387,7 @@ public abstract class Tree<
         Undo undo = new Undo(undoSkip, toRemoveList, toAddList);
         undo.apply();
         undos.add(undo);
+        redos.clear();
     }
 
 
@@ -510,4 +497,52 @@ public abstract class Tree<
         }
     }
 
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        join(sb, "\n");
+        return sb.toString();
+    }
+    public void join(Appendable sb, String separator){
+        Iterator<R> it = iterator();
+        String sep = "";
+        while(it.hasNext()){
+            try {
+                sb.append(sep);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            sep=separator;
+            stringifyPoint(sb, it.next());
+        }
+    }
+
+    /**
+     * @return false if undo stack was empty
+     */
+    public boolean undo(){
+        Undo undo = undos.pollLast();
+        if(undo==null) return false;
+
+        undo.unapply();
+        redos.push(undo);
+        return true;
+    }
+    public boolean canUndo(){
+        return ! undos.isEmpty();
+    }
+    public boolean canRedo(){
+        return ! redos.isEmpty();
+    }
+    /**
+     * @return false if undo stack was empty
+     */
+    public boolean redo(){
+        Undo redo = redos.poll();
+        if(redo==null) return false;
+
+        redo.apply();
+        undos.add(redo);
+        return true;
+    }
 }

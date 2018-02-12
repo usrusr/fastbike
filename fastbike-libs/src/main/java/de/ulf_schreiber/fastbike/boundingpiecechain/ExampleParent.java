@@ -1,4 +1,4 @@
-package de.ulf_schreiber.fastbike.boundingpiecechain.value;
+package de.ulf_schreiber.fastbike.boundingpiecechain;
 
 
 /**
@@ -8,8 +8,11 @@ public abstract class ExampleParent<
         R extends ExampleParent.Reading<R> & Value.Reading<R>,
         W extends ExampleParent.Writing<R,W> & ExampleParent.Reading<R> & Value.Writing<R,W>,
         G extends ExampleParent.Grouping<R,G> & Value.Grouping<R,G>,
-        M extends ExampleParent.Merging<R,G,M> & ExampleParent.Grouping<R,G> & Value.Merging<R,G,M>
-        > extends Value<R,W,G,M>{
+        M extends ExampleParent.Merging<R,G,M> & ExampleParent.Grouping<R,G> & Value.Merging<R,G,M>,
+        B,
+        L extends Value.Editor<L,R,W,B>,
+        A extends Value.Editor<A,G,M,B>
+        > extends Value<R,W,G,M,B,L,A>{
 
     public ExampleParent(double precision) {
         super(precision);

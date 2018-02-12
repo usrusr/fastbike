@@ -1,4 +1,4 @@
-package de.ulf_schreiber.fastbike.boundingpiecechain.value;
+package de.ulf_schreiber.fastbike.boundingpiecechain;
 
 import java.io.IOException;
 
@@ -6,8 +6,11 @@ public abstract class Coordinate<
         R extends Coordinate.Reading<R> & Value.Reading<R>,
         W extends Coordinate.Writing<R,W> & Coordinate.Reading<R> & Value.Writing<R,W>,
         G extends Coordinate.Grouping<R,G> & Value.Grouping<R,G>,
-        M extends Coordinate.Merging<R,G,M> & Coordinate.Grouping<R,G> & Value.Merging<R,G,M>
-        > extends Value<R, W, G, M> {
+        M extends Coordinate.Merging<R,G,M> & Coordinate.Grouping<R,G> & Value.Merging<R,G,M>,
+        B,
+        L extends Value.Editor<L,R,W,B>,
+        A extends Value.Editor<A,G,M,B>
+        > extends Value<R, W, G, M, B, L, A> {
 
     public Coordinate(double precision) {
         super(precision);
