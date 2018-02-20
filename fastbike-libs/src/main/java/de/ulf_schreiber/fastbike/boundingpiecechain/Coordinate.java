@@ -3,6 +3,7 @@ package de.ulf_schreiber.fastbike.boundingpiecechain;
 import java.io.IOException;
 
 public abstract class Coordinate<
+        V extends Coordinate<V,R,W,G,M,B,L,A>,
         R extends Coordinate.Reading<R> & Value.Reading<R>,
         W extends Coordinate.Writing<R,W> & Coordinate.Reading<R> & Value.Writing<R,W>,
         G extends Coordinate.Grouping<R,G> & Value.Grouping<R,G>,
@@ -10,7 +11,7 @@ public abstract class Coordinate<
         B,
         L extends Value.Editor<L,R,W,B>,
         A extends Value.Editor<A,G,M,B>
-        > extends Value<R, W, G, M, B, L, A> {
+        > extends Value<V, R, W, G, M, B, L, A> {
 
     public Coordinate(double precision) {
         super(precision);
@@ -174,29 +175,6 @@ public abstract class Coordinate<
             e.printStackTrace();
         }
     }
-
-//    protected abstract class ElementLooking<L extends Looking<L> & Writing<R,W>> extends Looking<L> implements Writing<R,W>{
-//        private final int skip;
-//        protected ElementLooking(int subsize, int fieldLimit) {
-//            super(subsize + 8, fieldLimit);
-//            skip = weight - (subsize + 8);
-//        }
-//        @Override public double getLat() {
-//            return buffer.getDouble(actualIndex);
-//        }
-//
-//        @Override public double getLng() {
-//            return buffer.getDouble(actualIndex + skip + 4);
-//        }
-//
-//        @Override public void setLat(double latitude) {
-//            buffer.putDouble(actualIndex, latitude);
-//        }
-//
-//        @Override public void setLng(double longitude) {
-//            buffer.putDouble(actualIndex + skip + 4, longitude);
-//        }
-//    }
 
     protected abstract static class Varing<
             R extends Reading<R>,

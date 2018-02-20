@@ -2,6 +2,7 @@ package de.ulf_schreiber.fastbike.boundingpiecechain;
 
 
 public class SimpleTree extends CoordinateDistance<
+        SimpleTree,
         SimpleTree.Reading,
         SimpleTree.Writing,
         SimpleTree.Grouping,

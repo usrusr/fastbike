@@ -5,6 +5,7 @@ package de.ulf_schreiber.fastbike.boundingpiecechain;
  * <p>replace ExampleParent with the actual parent, ExampleChild with the actual type (obviously...)</p>
  */
 public abstract class ExampleChild<
+        V extends ExampleChild<V,R,W,G,M,B,L,A>,
         R extends ExampleChild.Reading<R> & ExampleParent.Reading<R>,
         W extends ExampleChild.Writing<R,W> & ExampleChild.Reading<R> & ExampleParent.Writing<R,W>,
         G extends ExampleChild.Grouping<R,G> & ExampleParent.Grouping<R,G>,
@@ -12,7 +13,7 @@ public abstract class ExampleChild<
         B,
         L extends Value.Editor<L,R,W,B>,
         A extends Value.Editor<A,G,M,B>
-        > extends ExampleParent<R,W,G,M,B,L,A>{
+        > extends ExampleParent<V,R,W,G,M,B,L,A>{
 
     public ExampleChild(double precision) {
         super(precision);

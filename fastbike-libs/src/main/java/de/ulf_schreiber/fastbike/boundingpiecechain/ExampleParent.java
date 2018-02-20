@@ -5,6 +5,7 @@ package de.ulf_schreiber.fastbike.boundingpiecechain;
  * parent for {@link ExampleChild}, use {@link ExampleChild} as copy/paste template
  */
 public abstract class ExampleParent<
+        V extends ExampleParent<V,R,W,G,M,B,L,A>,
         R extends ExampleParent.Reading<R> & Value.Reading<R>,
         W extends ExampleParent.Writing<R,W> & ExampleParent.Reading<R> & Value.Writing<R,W>,
         G extends ExampleParent.Grouping<R,G> & Value.Grouping<R,G>,
@@ -12,7 +13,7 @@ public abstract class ExampleParent<
         B,
         L extends Value.Editor<L,R,W,B>,
         A extends Value.Editor<A,G,M,B>
-        > extends Value<R,W,G,M,B,L,A>{
+        > extends Value<V,R,W,G,M,B,L,A>{
 
     public ExampleParent(double precision) {
         super(precision);

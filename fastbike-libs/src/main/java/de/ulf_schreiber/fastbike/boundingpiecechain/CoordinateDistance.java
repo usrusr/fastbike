@@ -1,6 +1,9 @@
 package de.ulf_schreiber.fastbike.boundingpiecechain;
 
+import java.io.IOException;
+
 abstract public class CoordinateDistance<
+        V extends CoordinateDistance<V,R,W,G,M,B,L,A>,
         R extends CoordinateDistance.Reading<R> & Coordinate.Reading<R>,
         W extends CoordinateDistance.Writing<R,W> & CoordinateDistance.Reading<R> & Coordinate.Writing<R,W>,
         G extends CoordinateDistance.Grouping<R,G> & Coordinate.Grouping<R,G>,
@@ -8,7 +11,7 @@ abstract public class CoordinateDistance<
         B,
         L extends Value.Editor<L,R,W,B>,
         A extends Value.Editor<A,G,M,B>
-        > extends Coordinate<R,W,G,M,B,L,A>{
+        > extends Coordinate<V,R,W,G,M,B,L,A>{
 
     public CoordinateDistance(double precision) {
         super(precision);
@@ -136,5 +139,16 @@ abstract public class CoordinateDistance<
         }
     }
 
-
+    @Override
+    void stringifyPoint(Appendable sw, R point){
+        try {
+            if(point==null) {
+                sw.append("null");
+            }else{
+                sw.append('[').append(""+point.getLat()).append(':').append(""+point.getLng()).append("(").append(""+point.getDistance()).append(")]");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }
