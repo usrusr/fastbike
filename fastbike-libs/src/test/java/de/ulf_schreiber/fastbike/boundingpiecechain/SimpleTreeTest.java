@@ -5,15 +5,40 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.junit.Assert.assertThat;
+
 public class SimpleTreeTest {
-    @Test public void test(){
-        Tree tree = new Tree(new SimpleTree(0.00001d));
+    @Test public void hello(){
+        SimpleTree tree = new SimpleTree(0.00001d);
 
-        List<Point> line = line(0, 0, 10, 0, 1);
-        tree.append(line);
+        {
+            List<Point> line = line(0, 0, 10, 0, 1);
+            tree.append(line);
+        }
 
-        System.out.println("tree:\n");
 
+        System.out.println("tree1:\n" + tree);
+        assertThat(tree.join(""), equalTo("" +
+                "[0.0:0.0(0.0)]" +
+                "[5.0:0.0(5.0)]" +
+                "[10.0:0.0(5.0)]" +
+                ""));
+
+        {
+            List<Point> line = line(10, 0, 20, 10, 1);
+            tree.append(line);
+        }
+        System.out.println("tree2:\n" + tree);
+
+        assertThat(tree.join(""), equalTo("" +
+                "[0.0:0.0(0.0)]" +
+                "[5.0:0.0(5.0)]" +
+                "[10.0:0.0(5.0)]" +
+                "[10.0:0.0(0.0)]" +
+                "[15.0:5.0(7.0710678118654755)]" +
+                "[20.0:10.0(7.0710678118654755)]" +
+                ""));
     }
 
     private List<Point> line(int x0, int y0, int x1, int y1, int intermediateSteps) {

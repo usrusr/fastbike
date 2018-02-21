@@ -29,7 +29,7 @@ public abstract class Value<
 
 
 
-    int blocksize = 16;
+    final int blocksize = 16;
 
     boolean samePoint(R a, R b){
         return sameAs(a,b);
@@ -243,7 +243,7 @@ public abstract class Value<
     }
 
     /**
-     * wraps a node, either whole or a subset (this way, multiple pieces can use the same immutable tree, for when a piece is cut)
+     * wraps a node, either whole or a subset (this way, multiple undoPieces can use the same immutable tree, for when a piece is cut)
      */
     class Piece {
         final G bounds;
@@ -278,32 +278,32 @@ public abstract class Value<
     }
     class Undo{
         final int skip;
-        final int removed; // first n pieces are removed, rest added
-        final List<Piece> pieces;
+        final int removed; // first n undoPieces are removed, rest added
+        final List<Piece> undoPieces;
 
         Undo(int skip, List<Piece> toRemoveList, List<Piece> toAddList) {
             this.skip = skip;
-            pieces = new ArrayList<>(toRemoveList.size()+toAddList.size());
+            undoPieces = new ArrayList<>(toRemoveList.size()+toAddList.size());
             this.removed = toRemoveList.size();
-            pieces.addAll(toRemoveList);
-            pieces.addAll(toAddList);
+            undoPieces.addAll(toRemoveList);
+            undoPieces.addAll(toAddList);
         }
 
         final void apply() {
-            ListIterator<Piece> iterator = Value.this.pieces.listIterator(skip);
+            ListIterator<Piece> iterator = pieces.listIterator(skip);
             int i = 0;
             for (; i < removed; i++) iterator.remove();
-            int length = pieces.size();
-            for (; i < length; i++) iterator.add(pieces.get(i));
+            int length = undoPieces.size();
+            for (; i < length; i++) iterator.add(undoPieces.get(i));
         }
 
         final void unapply() {
             ListIterator<Piece> iterator = Value.this.pieces.listIterator(skip);
             int i = removed;
-            int length = pieces.size();
+            int length = undoPieces.size();
             for (; i < length; i++) iterator.remove();
 
-            for (i = 0; i < removed; i++) iterator.add(pieces.get(i));
+            for (i = 0; i < removed; i++) iterator.add(undoPieces.get(i));
         }
     }
 
@@ -393,7 +393,6 @@ public abstract class Value<
         return new Iterator<R>() {
             Iterator<Piece> pieceIt = pieces.iterator();
             Piece currentPiece = null;
-            double currentPieceDistLeft = 0;
 
             NodeIterator nodeIt = new NodeIterator();
             double curNodeDone = 0;
@@ -405,7 +404,6 @@ public abstract class Value<
             protected boolean calcNext(){
                 while(pieceIt.hasNext() && ! nodeIt.hasNext()){
                     currentPiece=pieceIt.next();
-                    currentPieceDistLeft=currentPiece.bounds.getDistance();
                     nodeIt.reset(currentPiece.root, currentPiece.offset, currentPiece.bounds.getDistance());
                 }
                 if( ! nodeIt.hasNext()) return false;
@@ -445,6 +443,7 @@ public abstract class Value<
             grpstack.clear();
             idxstack.clear();
             remaining = total;
+            doneInCur=0;
             hasNext = root.calculateNext(this, skip);
         }
 
@@ -595,6 +594,11 @@ public abstract class Value<
     abstract M createMutableBounds();
     abstract W createMutableVal();
 
+    String stringifyPoint(R point){
+        StringBuilder sb = new StringBuilder();
+        stringifyPoint(sb, point);
+        return sb.toString();
+    }
     void stringifyPoint(Appendable sw, R point){
         try {
             if(point==null) {
