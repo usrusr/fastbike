@@ -78,6 +78,7 @@ public abstract class Value<
 
                     if(builder.toSkip>precision){
                         interpolate(builder.lastVisited.read(), looker.read(),builder.toSkip / dist, builder.lastVisited);
+                        builder.lastVisited.write().setDistance(0d); // virtual start node interpolation
                         extendBy(builder.result, builder.lastVisited.read());
                         dist -= builder.toSkip;
                     }
@@ -89,6 +90,7 @@ public abstract class Value<
                         return;
                     }else {
                         copy(looker.read(), builder.lastVisited);
+                        builder.lastVisited.setDistance(dist);  // if cut by skip dist isn't looker.read.dist
                         builder.toVisit -= dist;
                         extendBy(builder.result, builder.lastVisited.read());
                     }
@@ -449,9 +451,11 @@ public abstract class Value<
             if(doneInCur < leafNode.elements) {
                 looker.wrap(leafNode.array, leafNode.elements, 0).moveAbsolute(doneInCur);
 
-                while (skipIn > 0 && skip > -precision) {
+                R read = looker.read();
+                while (skipIn > 0 && skip > read.getDistance()-precision) {
+                    skip-=read.getDistance();
+                    looker.moveRelative(1);
                     doneInCur++;
-                    skip -= looker.moveRelative(1).read().getDistance();
                 }
             }
             if(doneInCur>=leafNode.elements){
@@ -482,14 +486,22 @@ public abstract class Value<
             }
 
             double readDistance = looker.read().getDistance();
-            if(remaining<readDistance){
-                interpolate(cur.read(), looker.read(), remaining/readDistance, next.write());
+
+            double remainingWithSkip = remaining + skip;
+            if(remainingWithSkip < readDistance){
+                interpolate(cur.read(), looker.read(), remainingWithSkip/readDistance, next.write());
+                if(skip>0) {
+                    next.write().setDistance(next.getDistance()-skip);
+                }
                 remaining = 0;
                 doneInCur = Integer.MAX_VALUE;
                 return true;
             }
 
             copy(looker.read(), next);
+            if(skip>0) {
+                next.write().setDistance(next.getDistance()-skip);
+            }
 //            remaining-=next.getDistance();
             if(looker.hasNext()) looker.moveRelative(1);
             doneInCur++;
@@ -577,6 +589,8 @@ public abstract class Value<
             W extends Writing<R,W>
             > extends Reading<R> {
         W write();
+
+        void setDistance(double distance);
     }
     interface Grouping<
             R extends Reading<R>,
