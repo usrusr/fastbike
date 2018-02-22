@@ -14,8 +14,8 @@ public abstract class Coordinate<
         A extends Value.Editor<A,G,M,B>
         > extends Value<V, R, W, G, M, B, L, A> {
 
-    public Coordinate(double precision) {
-        super(precision);
+    public Coordinate(int blocksize, double precision) {
+        super(blocksize, precision);
     }
 
     interface Reading<
@@ -83,6 +83,7 @@ public abstract class Coordinate<
         toClear.setWest(Double.NaN);
         toClear.setNorth(Double.NaN);
         toClear.setSouth(Double.NaN);
+
         return super.clearMerge(toClear);
     }
 

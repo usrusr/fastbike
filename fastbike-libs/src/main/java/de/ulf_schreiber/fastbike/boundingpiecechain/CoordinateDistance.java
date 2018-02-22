@@ -13,8 +13,8 @@ abstract public class CoordinateDistance<
         A extends Value.Editor<A,G,M,B>
         > extends Coordinate<V,R,W,G,M,B,L,A>{
 
-    public CoordinateDistance(double precision) {
-        super(precision);
+    public CoordinateDistance(int blocksize, double precision) {
+        super(blocksize, precision);
     }
 
     interface Reading <
@@ -53,6 +53,18 @@ abstract public class CoordinateDistance<
     public void copy(R from, W to) {
         to.setDistance(from.getDistance());
         super.copy(from, to);
+    }
+
+    @Override
+    public W clearWrite(W toClear) {
+        toClear.setDistance(0d);
+        return super.clearWrite(toClear);
+    }
+
+    @Override
+    public M clearMerge(M toClear) {
+        toClear.setDistance(0d);
+        return super.clearMerge(toClear);
     }
 
     @Override

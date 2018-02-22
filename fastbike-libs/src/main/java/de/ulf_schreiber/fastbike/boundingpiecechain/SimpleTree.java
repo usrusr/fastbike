@@ -11,8 +11,9 @@ public class SimpleTree extends CoordinateDistance<
         SimpleTree.ElementWriter,
         SimpleTree.AggregateWriter
     >{
-    public SimpleTree(double precision) {
-        super(precision);
+
+    public SimpleTree(int blocksize, double precision) {
+        super(blocksize, precision);
     }
 
     @Override

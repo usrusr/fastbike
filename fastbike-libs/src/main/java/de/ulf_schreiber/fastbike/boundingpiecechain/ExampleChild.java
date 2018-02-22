@@ -15,8 +15,8 @@ public abstract class ExampleChild<
         A extends Value.Editor<A,G,M,B>
         > extends ExampleParent<V,R,W,G,M,B,L,A>{
 
-    public ExampleChild(double precision) {
-        super(precision);
+    public ExampleChild(int blocksize, double precision) {
+        super(blocksize, precision);
     }
 
     interface Reading <

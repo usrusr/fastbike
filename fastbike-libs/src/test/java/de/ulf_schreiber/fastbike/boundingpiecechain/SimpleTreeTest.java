@@ -1,5 +1,7 @@
 package de.ulf_schreiber.fastbike.boundingpiecechain;
 
+import jdk.nashorn.internal.runtime.JSONFunctions;
+import org.junit.ComparisonFailure;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -7,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -22,7 +23,7 @@ public class SimpleTreeTest {
 
 
         System.out.println("tree1:\n" + tree);
-        assertThat(tree.join(""), equalTo("" +
+        same(tree, ("" +
                 "[_0.__:_0.__(_0.__)]" +
                 "[_5.__:_0.__(_5.__)]" +
                 "[10.__:_0.__(_5.__)]" +
@@ -34,7 +35,7 @@ public class SimpleTreeTest {
         }
         System.out.println("tree2:\n" + tree);
 
-        assertThat(tree.join(""), equalTo("" +
+        same(tree, ("" +
                 "[_0.__:_0.__(_0.__)]" +
                 "[_5.__:_0.__(_5.__)]" +
                 "[10.__:_0.__(_5.__)]" +
@@ -45,7 +46,7 @@ public class SimpleTreeTest {
 
         tree.undo();
         System.out.println("tree3:\n" + tree);
-        assertThat(tree.join(""), equalTo("" +
+        same(tree, ("" +
                 "[_0.__:_0.__(_0.__)]" +
                 "[_5.__:_0.__(_5.__)]" +
                 "[10.__:_0.__(_5.__)]" +
@@ -53,17 +54,17 @@ public class SimpleTreeTest {
 
         assertThat(tree.undo(), is(true));
         System.out.println("tree4:\n" + tree);
-        assertThat(tree.join(""), equalTo("" +
+        same(tree, ("" +
                 ""));
 
         assertThat(tree.undo(), is(false));
         System.out.println("tree5:\n" + tree);
-        assertThat(tree.join(""), equalTo("" +
+        same(tree, ("" +
                 ""));
 
         assertThat(tree.redo(), is(true));
         System.out.println("tree6:\n" + tree);
-        assertThat(tree.join(""), equalTo("" +
+        same(tree, ("" +
                 "[_0.__:_0.__(_0.__)]" +
                 "[_5.__:_0.__(_5.__)]" +
                 "[10.__:_0.__(_5.__)]" +
@@ -71,7 +72,7 @@ public class SimpleTreeTest {
 
         assertThat(tree.redo(), is(true));
         System.out.println("tree7:\n" + tree);
-        assertThat(tree.join(""), equalTo("" +
+        same(tree, ("" +
                 "[_0.__:_0.__(_0.__)]" +
                 "[_5.__:_0.__(_5.__)]" +
                 "[10.__:_0.__(_5.__)]" +
@@ -81,7 +82,7 @@ public class SimpleTreeTest {
                 ""));
         assertThat(tree.redo(), is(false));
         System.out.println("tree8:\n" + tree);
-        assertThat(tree.join(""), equalTo("" +
+        same(tree, ("" +
                 "[_0.__:_0.__(_0.__)]" +
                 "[_5.__:_0.__(_5.__)]" +
                 "[10.__:_0.__(_5.__)]" +
@@ -111,14 +112,14 @@ public class SimpleTreeTest {
 
 
         System.out.println("tree1:\n" + tree);
-        assertThat(tree.join(""), equalTo("" +
+        same(tree, "" +
                 "[_0.__:_0.__(_0.__)]" +
                 "[_5.__:_5.__(_7.07)]" +
                 "[10.__:10.__(_7.07)]" +
                 "[10.__:10.__(_0.__)]" +
                 "[_5.__:15.__(_7.07)]" +
                 "[_0.__:20.__(_7.07)]" +
-                ""));
+                "");
 
         {
             List<Point> line = line(5, 5, 5, 15, 1);
@@ -128,15 +129,15 @@ public class SimpleTreeTest {
         String tree2 = tree.toString();
         System.out.println("tree2:\n" + tree2);
 
-        assertThat(tree.join(""), equalTo("" +
+        same(tree, "" +
                 "[_0.__:_0.__(_0.__)]" +
                 "[_5.__:_5.__(_7.07)]" +
                 "[_5.__:_5.__(_0.__)]" +
                 "[_5.__:10.__(_5.__)]" +
                 "[_5.__:15.__(_5.__)]" +
-//                "[_5.__:15.__(_0.__)]" +
+                "[_5.__:15.__(_0.__)]" +
                 "[_0.__:20.__(_7.07)]" +
-                ""));
+                "");
 
     }
 
@@ -154,7 +155,7 @@ public class SimpleTreeTest {
 
 
         System.out.println("tree1:\n" + tree);
-        assertThat(tree.join(""), equalTo("" +
+        same(tree, ("" +
                 "[_0.__:_0.__(_0.__)]" +
                 "[_5.__:_5.__(_7.07)]" +
                 "[10.__:10.__(_7.07)]" +
@@ -170,7 +171,7 @@ public class SimpleTreeTest {
         String tree2 = tree.toString();
         System.out.println("tree2:\n" + tree2);
 
-        assertThat(tree.join(""), equalTo("" +
+        same(tree, ("" +
                 "[_0.__:_0.__(_0.__)]" +
                 "[_5.__:_5.__(_7.07)]" +
                 "[_5.__:_5.__(_0.__)]" +
@@ -196,7 +197,7 @@ public class SimpleTreeTest {
 
 
         System.out.println("tree1:\n" + tree);
-        assertThat(tree.join(""), equalTo("" +
+        same(tree, ("" +
                 "[_0.__:_0.__(_0.__)]" +
                 "[10.__:10.__(14.14)]" +
                 "[10.__:10.__(_0.__)]" +
@@ -212,17 +213,135 @@ public class SimpleTreeTest {
         String tree2 = tree.toString();
         System.out.println("tree2:\n" + tree2);
 
-        assertThat(tree.join(""), equalTo("" +
+        same(tree, "" +
                 "[_0.__:_0.__(_0.__)]" +
                 "[_5.__:_5.__(_7.07)]" +
                 "[_5.__:_5.__(_0.__)]" +
                 "[_5.__:10.__(_5.__)]" +
                 "[_5.__:15.__(_5.__)]" +
-//                "[_5.__:15.__(_0.__)]" +
+                "[_5.__:15.__(_0.__)]" +
                 "[_0.__:20.__(_7.07)]" +
+                "");
+    }
+
+    private void same(SimpleTree tree, String expected) {
+            String is = tree.join("\n");
+            String should = expected.replace("][", "]\n[");
+            if( ! should.equals(is)){
+                throw new ComparisonFailure("tree not as expected" +
+                        "\n  expected: " + JSONFunctions.quote(should) +
+                        "\n    actual: " + JSONFunctions.quote(is) +
+                        "\n", should, is);
+            }
+    }
+
+
+
+    @Test public void insertDeep() {
+        SimpleTree tree = new TestTree(3);
+
+        {
+            List<Point> line = line(0, 0, 10, 10, 25);
+            tree.append(line);
+        }
+        System.out.println("tree0:\n" + tree);
+        {
+            List<Point> line = line(10, 10, 00, 20, 15);
+            tree.append(line);
+        }
+
+
+        System.out.println("tree1:\n" + tree);
+        same(tree, ("" +
+                "[_0.__:_0.__(_0.__)]" +
+                "[__.38:__.38(__.54)]" +
+                "[__.77:__.77(__.54)]" +
+                "[_1.15:_1.15(__.54)]" +
+                "[_1.54:_1.54(__.54)]" +
+                "[_1.92:_1.92(__.54)]" +
+                "[_2.31:_2.31(__.54)]" +
+                "[_2.69:_2.69(__.54)]" +
+                "[_3.08:_3.08(__.54)]" +
+                "[_3.46:_3.46(__.54)]" +
+                "[_3.85:_3.85(__.54)]" +
+                "[_4.23:_4.23(__.54)]" +
+                "[_4.62:_4.62(__.54)]" +
+                "[_5.__:_5.__(__.54)]" +
+                "[_5.38:_5.38(__.54)]" +
+                "[_5.77:_5.77(__.54)]" +
+                "[_6.15:_6.15(__.54)]" +
+                "[_6.54:_6.54(__.54)]" +
+                "[_6.92:_6.92(__.54)]" +
+                "[_7.31:_7.31(__.54)]" +
+                "[_7.69:_7.69(__.54)]" +
+                "[_8.08:_8.08(__.54)]" +
+                "[_8.46:_8.46(__.54)]" +
+                "[_8.85:_8.85(__.54)]" +
+                "[_9.23:_9.23(__.54)]" +
+                "[_9.62:_9.62(__.54)]" +
+                "[10.__:10.__(__.54)]" +
+                "[10.__:10.__(_0.__)]" +
+                "[_9.38:10.63(__.88)]" +
+                "[_8.75:11.25(__.88)]" +
+                "[_8.13:11.88(__.88)]" +
+                "[_7.5_:12.5_(__.88)]" +
+                "[_6.88:13.13(__.88)]" +
+                "[_6.25:13.75(__.88)]" +
+                "[_5.63:14.38(__.88)]" +
+                "[_5.__:15.__(__.88)]" +
+                "[_4.38:15.63(__.88)]" +
+                "[_3.75:16.25(__.88)]" +
+                "[_3.13:16.88(__.88)]" +
+                "[_2.5_:17.5_(__.88)]" +
+                "[_1.88:18.13(__.88)]" +
+                "[_1.25:18.75(__.88)]" +
+                "[__.63:19.38(__.88)]" +
+                "[_0.__:20.__(__.88)]" +
+                ""));
+
+        {
+            List<Point> line = line(5, 5, 5, 15, 4);
+            double _7_07 = Math.sqrt(50);
+            tree.replace(_7_07, _7_07*2, line);
+        }
+        String tree2 = tree.toString();
+        System.out.println("tree2:\n" + tree2);
+
+        same(tree, ("" +
+                "[_0.__:_0.__(_0.__)]" +
+                "[__.38:__.38(__.54)]" +
+                "[__.77:__.77(__.54)]" +
+                "[_1.15:_1.15(__.54)]" +
+                "[_1.54:_1.54(__.54)]" +
+                "[_1.92:_1.92(__.54)]" +
+                "[_2.31:_2.31(__.54)]" +
+                "[_2.69:_2.69(__.54)]" +
+                "[_3.08:_3.08(__.54)]" +
+                "[_3.46:_3.46(__.54)]" +
+                "[_3.85:_3.85(__.54)]" +
+                "[_4.23:_4.23(__.54)]" +
+                "[_4.62:_4.62(__.54)]" +
+                "[_5.__:_5.__(__.54)]" +
+                "[_5.__:_5.__(_0.__)]" +
+                "[_5.__:_7.__(_2.__)]" +
+                "[_5.__:_9.__(_2.__)]" +
+                "[_5.__:11.__(_2.__)]" +
+                "[_5.__:13.__(_2.__)]" +
+                "[_5.__:15.__(_2.__)]" +
+                "[_5.__:15.__(_0.__)]" +
+                "[_4.38:15.63(__.88)]" +
+                "[_3.75:16.25(__.88)]" +
+                "[_3.13:16.88(__.88)]" +
+                "[_2.5_:17.5_(__.88)]" +
+                "[_1.88:18.13(__.88)]" +
+                "[_1.25:18.75(__.88)]" +
+                "[__.63:19.38(__.88)]" +
+                "[_0.__:20.__(__.88)]" +
                 ""));
 
     }
+
+
 
 
     private List<Point> line(int x0, int y0, int x1, int y1, int intermediateSteps) {
@@ -230,8 +349,8 @@ public class SimpleTreeTest {
         ArrayList<Point> points = new ArrayList<>(intermediateSteps + 2);
         points.add(new Point(x0,y0,0));
 
-        int xd = x1 - x0;
-        int yd = y1 - y0;
+        double xd = x1 - x0;
+        double yd = y1 - y0;
         int steps = intermediateSteps + 1;
         double dd = Math.sqrt(xd*xd+yd*yd) / steps;
         double sx = xd/steps;
@@ -284,9 +403,11 @@ public class SimpleTreeTest {
 
     private static class TestTree extends SimpleTree {
         public TestTree() {
-            super(0.00001d);
+            this(16);
         }
-
+        public TestTree(int blockSize) {
+            super(blockSize,0.00001d);
+        }
         @Override
         protected void stringifyDouble(Appendable sw, double val) throws IOException {
             sw.append(
@@ -295,7 +416,12 @@ public class SimpleTreeTest {
                     .replaceAll("0(?=0*$)","_")
                     .replace("__.__", "_0.__")
             );
-//            sw.append(formatter.format(val).replaceAll("^0(!\\.)|(?<= )0(!\\.)", " "));
         }
     }
+
+
+
+
+
+
 }

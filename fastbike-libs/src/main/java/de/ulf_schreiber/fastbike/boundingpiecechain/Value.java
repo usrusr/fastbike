@@ -29,7 +29,8 @@ public abstract class Value<
 
 
 
-    final int blocksize = 16;
+    protected final int blocksize;
+
 
     boolean samePoint(R a, R b){
         return sameAs(a,b);
@@ -53,8 +54,8 @@ public abstract class Value<
                 R next = it.next();
                 copy(next, elemLooker.write());
                 extendBy(mutableBoundsReturn, next);
-                elemLooker.moveRelative(1);
                 elements++;
+                if(elements<blocksize) elemLooker.moveRelative(1);
             }
         }
 
@@ -117,20 +118,27 @@ public abstract class Value<
             return depth;
         }
 
+        /**
+         *
+         * @param it
+         * @param elemLooker
+         * @param groupLooker
+         * @param mutableBoundsReturn contains bounds of firstChild if firstChild is not null on call, bounds of created after call
+         * @param firstChild
+         * @param depth
+         */
         GroupNode(Iterator<? extends R> it, L elemLooker, A groupLooker, M mutableBoundsReturn, Node<?> firstChild, int depth){
             children = new Node[blocksize];
             array = groupLooker.createBuffer(blocksize);
             this.depth = depth;
 
-            groupLooker.wrap(array, 0, 0);
-
-            M groupLookerWrite = groupLooker.write();
-            G mutableBoundsReturnRead = mutableBoundsReturn.read();
+            groupLooker.wrap(array, blocksize, 0);
 
             if(firstChild!=null) { // creating a new root
                 children[0]=firstChild;
-                clearMerge(groupLookerWrite);
-                extendBy(groupLookerWrite, mutableBoundsReturnRead);
+                clearMerge(groupLooker.write());
+                extendBy(groupLooker.write(), mutableBoundsReturn.read());
+                elements++;
             }
 
             while(it.hasNext() && elements<blocksize){
@@ -138,20 +146,22 @@ public abstract class Value<
 
                 if(depth==1){
                     groupLooker.moveAbsolute(elements);
-                    newNode = new LeafNode(it, elemLooker, groupLookerWrite);
+                    clearMerge(groupLooker.write()); // need to clear, because we need to start with NaN bounds instead of 0d
+                    newNode = new LeafNode(it, elemLooker, groupLooker.write());
                 } else {
                     clearMerge(mutableBoundsReturn);
                     newNode = new GroupNode(it, elemLooker, groupLooker, mutableBoundsReturn, null, depth-1);
-                    groupLooker.wrap(array, elements, 0);
-                    clearMerge(groupLookerWrite);
-                    extendBy(groupLookerWrite, mutableBoundsReturnRead);
+                    groupLooker.wrap(array, blocksize, 0);
+                    groupLooker.moveAbsolute(elements);
+                    clearMerge(groupLooker.write()); // need to clear, because we need to start with NaN bounds instead of 0d
+                    extendBy(groupLooker.write(), mutableBoundsReturn.read());
                 }
                 children[elements] = newNode;
                 elements++;
             }
 
             clearMerge(mutableBoundsReturn);
-            groupLooker.wrap(array, 0, 0);
+            groupLooker.wrap(array, blocksize, 0);
             for(int i=0; i<elements;i++){
                 groupLooker.moveAbsolute(i);
                 extendBy(mutableBoundsReturn, groupLooker.read());
@@ -164,8 +174,8 @@ public abstract class Value<
             if(builder.toVisit < precision) return;
 
             A groupLooker = builder.groupLooker;
-            clearMerge(groupLooker.write());
-            groupLooker.wrap(array, 0, 0);
+            groupLooker.wrap(array, blocksize, 0);
+//            clearMerge(builder.result);
             G read = groupLooker.read();
             for(int i=0; i<elements;i++){
                 groupLooker.moveAbsolute(i);
@@ -425,7 +435,7 @@ public abstract class Value<
 
         private boolean calculateNext(GroupNode node, double skip) {
             A looker = groupLooker;
-            looker.wrap(node.array, node.elements, 0);
+            looker.wrap(node.array, blocksize, 0);
             for(int i=0;i<node.elements;i++){
                 double childLen = looker.read().getDistance();
                 if(childLen +precision > skip){
@@ -449,12 +459,14 @@ public abstract class Value<
             leaf=leafNode; // for next iteration
             L looker = valueLooker;
             if(doneInCur < leafNode.elements) {
-                looker.wrap(leafNode.array, leafNode.elements, 0).moveAbsolute(doneInCur);
+                looker.wrap(leafNode.array, blocksize, 0).moveAbsolute(doneInCur);
 
                 R read = looker.read();
-                while (skipIn > 0 && skip > read.getDistance()-precision) {
-                    skip-=read.getDistance();
-                    looker.moveRelative(1);
+                while (skipIn > 0 && skip > read.getDistance()) {
+                    skip -= read.getDistance();
+                    if(looker.index<looker.size) {
+                        looker.moveRelative(1);
+                    }
                     doneInCur++;
                 }
             }
@@ -468,17 +480,25 @@ public abstract class Value<
                     if (cur < groupNode.elements) {
                         idxstack.set(idx, cur);
                         Node<?> child = groupNode.children[cur];
-                        idx++;
-                        while(idx < stackDepth){
+
+                        while(GroupNode.class.isInstance(child)){
+                            idx++;
                             GroupNode newParent = GroupNode.class.cast(child);
                             grpstack.set(idx, newParent);
                             idxstack.set(idx, 0);
                             child = newParent.children[0];
                         }
+
+//                        idx++;
+//                        while(idx < stackDepth){
+//                            GroupNode newParent = GroupNode.class.cast(child);
+//                            grpstack.set(idx, newParent);
+//                            idxstack.set(idx, 0);
+//                            child = newParent.children[0];
+//                        }
                         doneInCur = 0;
                         LeafNode cast = LeafNode.class.cast(child);
-                        calculateNext(cast, skip);
-                        return false;
+                        return calculateNext(cast, skip);
                     }
                     idx--;
                 }
@@ -503,7 +523,7 @@ public abstract class Value<
                 next.write().setDistance(next.getDistance()-skip);
             }
 //            remaining-=next.getDistance();
-            if(looker.hasNext()) looker.moveRelative(1);
+            if(looker.index<leafNode.elements-1) looker.moveRelative(1);
             doneInCur++;
             return true;
         }
@@ -573,7 +593,8 @@ public abstract class Value<
 
     protected final double precision;
 
-    protected Value(double precision) {
+    protected Value(int blocksize, double precision) {
+        this.blocksize = blocksize;
         this.precision = precision;
     }
 
@@ -701,12 +722,15 @@ public abstract class Value<
                 size = elements;
             }
             this.index = 0;
+            this.actualIndex = 0;
             return this.asEditor();
         }
 
         final public L moveRelative(int direction) {
             int next = index + direction;
-            if(next < 0 || next >= size) throw new IndexOutOfBoundsException();
+            if(next < 0 || next >= size) {
+                throw new IndexOutOfBoundsException();
+            }
             index = next;
             actualIndex = offset + index*weight;
             return this.asEditor();
@@ -717,7 +741,9 @@ public abstract class Value<
         }
 
         final public L moveAbsolute(int next) {
-            if(next < 0 || next >= size) throw new IndexOutOfBoundsException();
+            if(next < 0 || next >= size) {
+                throw new IndexOutOfBoundsException();
+            }
             index = next;
             actualIndex = offset + index*weight;
             return this.asEditor();
