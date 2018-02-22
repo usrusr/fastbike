@@ -2,6 +2,7 @@ package de.ulf_schreiber.fastbike.boundingpiecechain;
 
 import java.io.IOException;
 
+/** pointless class, fold into coordinateDistance */
 public abstract class Coordinate<
         V extends Coordinate<V,R,W,G,M,B,L,A>,
         R extends Coordinate.Reading<R> & Value.Reading<R>,
@@ -131,8 +132,8 @@ public abstract class Coordinate<
         while(lng +offset - myMid < -180) offset+=360;
         while(lng +offset - myMid > 180) offset-=360;
 
-        toExtend.setEast(max(myEast, myEast+offset));
-        toExtend.setWest(min(myWest, myWest+offset));
+        toExtend.setEast(max(myEast, lng+offset));
+        toExtend.setWest(min(myWest, lng+offset));
     }
 
 
@@ -164,25 +165,27 @@ public abstract class Coordinate<
     }
 
     @Override
-    void stringifyPoint(Appendable sw, R point){
-        try {
-            if(point==null) {
-                sw.append("null");
-            }else{
-                sw.append('[').append(""+point.getLat()).append(':').append(""+point.getLng()).append(']');
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+    void stringifyPoint(Appendable sw, R point) throws IOException {
+        if(point==null) {
+            sw.append("null");
+        }else{
+            sw.append('[');
+            stringifyDouble(sw, point.getLat());
+            sw.append(':');
+            stringifyDouble(sw, point.getLng());
+            sw.append(']');
         }
     }
+
+
 
     protected abstract static class Varing<
             R extends Reading<R>,
             W extends Writing<R,W>,
             V extends Varing<R,W,V>
         > extends Value.Varing<R,W,V> implements Writing<R,W> {
-        private double lat;
-        private double lng;
+        private double lat = Double.NaN;
+        private double lng = Double.NaN;
 
         @Override final public double getLat() {
             return lat;
@@ -205,10 +208,10 @@ public abstract class Coordinate<
             M extends Merging<R, G, M>,
             A extends VaringAggregate<R, G, M, A> & Merging<R,G,M>
            > extends Value.VaringAggregate<R, G, M, A> implements Merging<R,G,M> {
-        private double west;
-        private double north;
-        private double east;
-        private double south;
+        private double west = Double.NaN;
+        private double north = Double.NaN;
+        private double east = Double.NaN;
+        private double south = Double.NaN;
 
         @Override final public double getWest() {
             return west;

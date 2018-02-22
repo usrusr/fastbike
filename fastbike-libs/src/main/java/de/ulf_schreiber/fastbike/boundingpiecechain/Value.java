@@ -61,7 +61,7 @@ public abstract class Value<
         @Override int depth() { return 0; }
         @Override
         public void build(BoundingBuilder builder) {
-            V meta = builder.tree();
+
             if(builder.toVisit < precision) return;
 
             L looker = builder.valueLooker;
@@ -73,15 +73,24 @@ public abstract class Value<
                 double restToSkip = builder.toSkip-dist;
                 if(restToSkip> precision){
                     builder.toSkip = restToSkip;
+                    copy(looker.read(), builder.lastVisited);
                 }else{
+
+                    if(builder.toSkip>precision){
+                        interpolate(builder.lastVisited.read(), looker.read(),builder.toSkip / dist, builder.lastVisited);
+                        extendBy(builder.result, builder.lastVisited.read());
+                        dist -= builder.toSkip;
+                    }
                     builder.toSkip = 0;
-                    extendBy(builder.result, looker.read());
-                    double restToVisit = builder.toVisit-dist;
-                    if(restToSkip< precision){
-                        builder.toVisit=0;
+                    if(dist > builder.toVisit + precision){
+                        interpolate(builder.lastVisited.read(), looker.read(), builder.toVisit / dist, builder.lastVisited);
+                        builder.toVisit = 0;
+                        extendBy(builder.result, builder.lastVisited.read());
                         return;
-                    }else{
-                        builder.toVisit = restToVisit;
+                    }else {
+                        copy(looker.read(), builder.lastVisited);
+                        builder.toVisit -= dist;
+                        extendBy(builder.result, builder.lastVisited.read());
                     }
                 }
                 looker.moveRelative(1);
@@ -89,47 +98,8 @@ public abstract class Value<
         }
 
         @Override
-        protected boolean calculateNext(NodeIterator state, double skip) {
-            state.leaf=this; // for next iteration
-            L looker = state.valueLooker;
-            if(state.doneInCur < elements) {
-                looker.wrap(array, elements, 0).moveAbsolute(state.doneInCur);
-
-                while (skip > precision) {
-                    state.doneInCur++;
-                    skip -= looker.moveRelative(1).read().getDistance();
-                }
-            }
-            if(state.doneInCur>=elements){
-                int stackDepth = state.grpstack.size();
-                int idx = stackDepth -1;
-                while(idx>=0){ // zip all deeper levels to first element
-                    GroupNode groupNode = state.grpstack.get(idx);
-                    int cur = state.idxstack.get(idx);
-                    cur++;
-                    if (cur < groupNode.elements) {
-                        state.idxstack.set(idx, cur);
-                        Node<?> child = groupNode.children[cur];
-                        idx++;
-                        while(idx < stackDepth){
-                            GroupNode newParent = GroupNode.class.cast(child);
-                            state.grpstack.set(idx, newParent);
-                            state.idxstack.set(idx, 0);
-                            child = newParent.children[0];
-                        }
-                        state.doneInCur = 0;
-                        LeafNode cast = LeafNode.class.cast(child);
-                        cast.calculateNext(state, skip);
-                        return false;
-                    }
-                    idx--;
-                }
-                return false;
-            }
-            copy(looker.read(), state.next);
-            if(looker.hasNext()) looker.moveRelative(1);
-            state.doneInCur++;
-            return true;
+        protected boolean calculateNext(NodeIterator state, final double skipIn) {
+            return state.calculateNext(this, skipIn);
         }
     }
 
@@ -218,23 +188,7 @@ public abstract class Value<
 
         @Override
         protected boolean calculateNext(NodeIterator state, double skip) {
-            A looker = state.groupLooker;
-            looker.wrap(array, elements, 0);
-            for(int i=0;i<elements;i++){
-                double childLen = looker.read().getDistance();
-                if(childLen +precision > skip){
-                    Node<?> child = children[i];
-                    state.doneInCur=0;
-                    state.grpstack.add(this);
-
-                    state.idxstack.add(i);
-
-                    return child.calculateNext(state, skip);
-                }
-                skip -= childLen;
-                looker.moveRelative(1);
-            }
-            return false;
+            return state.calculateNext(this, skip);
         }
     }
 
@@ -292,7 +246,10 @@ public abstract class Value<
         final void apply() {
             ListIterator<Piece> iterator = pieces.listIterator(skip);
             int i = 0;
-            for (; i < removed; i++) iterator.remove();
+            for (; i < removed; i++) {
+                iterator.next();
+                iterator.remove();
+            }
             int length = undoPieces.size();
             for (; i < length; i++) iterator.add(undoPieces.get(i));
         }
@@ -301,16 +258,20 @@ public abstract class Value<
             ListIterator<Piece> iterator = Value.this.pieces.listIterator(skip);
             int i = removed;
             int length = undoPieces.size();
-            for (; i < length; i++) iterator.remove();
+            for (; i < length; i++) {
+                iterator.next();
+                iterator.remove();
+            }
 
             for (i = 0; i < removed; i++) iterator.add(undoPieces.get(i));
         }
     }
 
     public class BoundingBuilder {
-        final M result;
-        final L valueLooker;
-        final A groupLooker;
+        final M result = createMutableBounds();
+        final L valueLooker = createElementWriter();
+        final A groupLooker = createAggregateWriter();
+        final W lastVisited = createMutableVal();
 
         double toSkip;
         double toVisit;
@@ -318,9 +279,6 @@ public abstract class Value<
         public BoundingBuilder(double skipDistance, double distance) {
             this.toSkip = skipDistance;
             this.toVisit = distance;
-            result = createMutableBounds();
-            valueLooker = createElementWriter();
-            groupLooker = createAggregateWriter();
         }
 
         public V tree() {
@@ -462,28 +420,111 @@ public abstract class Value<
         @Override public void remove() {
             throw new UnsupportedOperationException();
         }
+
+        private boolean calculateNext(GroupNode node, double skip) {
+            A looker = groupLooker;
+            looker.wrap(node.array, node.elements, 0);
+            for(int i=0;i<node.elements;i++){
+                double childLen = looker.read().getDistance();
+                if(childLen +precision > skip){
+                    Node<?> child = node.children[i];
+                    doneInCur=0;
+                    grpstack.add(node);
+
+                    idxstack.add(i);
+
+                    return child.calculateNext(this, skip);
+                }
+                skip -= childLen;
+                looker.moveRelative(1);
+            }
+            return false;
+        }
+
+        private boolean calculateNext(LeafNode leafNode, double skipIn) {
+            if(remaining<precision) return false;
+            double skip = skipIn;
+            leaf=leafNode; // for next iteration
+            L looker = valueLooker;
+            if(doneInCur < leafNode.elements) {
+                looker.wrap(leafNode.array, leafNode.elements, 0).moveAbsolute(doneInCur);
+
+                while (skipIn > 0 && skip > -precision) {
+                    doneInCur++;
+                    skip -= looker.moveRelative(1).read().getDistance();
+                }
+            }
+            if(doneInCur>=leafNode.elements){
+                int stackDepth = grpstack.size();
+                int idx = stackDepth -1;
+                while(idx>=0){ // zip all deeper levels to first element
+                    GroupNode groupNode = grpstack.get(idx);
+                    int cur = idxstack.get(idx);
+                    cur++;
+                    if (cur < groupNode.elements) {
+                        idxstack.set(idx, cur);
+                        Node<?> child = groupNode.children[cur];
+                        idx++;
+                        while(idx < stackDepth){
+                            GroupNode newParent = GroupNode.class.cast(child);
+                            grpstack.set(idx, newParent);
+                            idxstack.set(idx, 0);
+                            child = newParent.children[0];
+                        }
+                        doneInCur = 0;
+                        LeafNode cast = LeafNode.class.cast(child);
+                        calculateNext(cast, skip);
+                        return false;
+                    }
+                    idx--;
+                }
+                return false;
+            }
+
+            double readDistance = looker.read().getDistance();
+            if(remaining<readDistance){
+                interpolate(cur.read(), looker.read(), remaining/readDistance, next.write());
+                remaining = 0;
+                doneInCur = Integer.MAX_VALUE;
+                return true;
+            }
+
+            copy(looker.read(), next);
+//            remaining-=next.getDistance();
+            if(looker.hasNext()) looker.moveRelative(1);
+            doneInCur++;
+            return true;
+        }
     }
+
+    protected abstract void interpolate(R from, R to, double fraction, W result);
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        join(sb, "\n");
+        try {
+            join(sb, "\n");
+        } catch (IOException e) {
+            e.printStackTrace();
+            sb.append(e.getMessage());
+        }
         return sb.toString();
     }
     public String join(String separator){
         StringBuilder sb = new StringBuilder();
-        join(sb, separator);
+        try {
+            join(sb, separator);
+        } catch (IOException e) {
+            e.printStackTrace();
+            sb.append(e.getMessage());
+        }
         return sb.toString();
     }
-    public void join(Appendable sb, String separator){
+    public void join(Appendable sb, String separator) throws IOException {
         Iterator<R> it = iterator();
         String sep = "";
         while(it.hasNext()){
-            try {
-                sb.append(sep);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            sb.append(sep);
             sep=separator;
             stringifyPoint(sb, it.next());
         }
@@ -594,21 +635,24 @@ public abstract class Value<
     abstract M createMutableBounds();
     abstract W createMutableVal();
 
-    String stringifyPoint(R point){
+    final String stringifyPoint(R point){
         StringBuilder sb = new StringBuilder();
-        stringifyPoint(sb, point);
-        return sb.toString();
-    }
-    void stringifyPoint(Appendable sw, R point){
         try {
-            if(point==null) {
-                sw.append("null");
-            }else{
-                sw.append('[').append(point.toString()).append(']');
-            }
+            stringifyPoint(sb, point);
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return point.toString();
+    }
+    void stringifyPoint(Appendable sw, R point) throws IOException {
+        if(point==null) {
+            sw.append("null");
+        }else{
+            sw.append('[').append(point.toString()).append(']');
+        }
+    }
+    protected void stringifyDouble(Appendable sw, double val) throws IOException {
+        sw.append(""+val);
     }
 
     static abstract class Editor<L extends Editor<L,R,W,B>,R,W,B>  {

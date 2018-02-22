@@ -110,7 +110,7 @@ abstract public class CoordinateDistance<
             W extends Writing<R, W>,
             V extends Varing<R,W,V>
         > extends Coordinate.Varing<R,W,V> implements Writing<R,W> {
-        private double distance;
+        private double distance = 0d;
 
         @Override
         public final double getDistance() {
@@ -129,7 +129,7 @@ abstract public class CoordinateDistance<
             M extends Merging<R, G, M>,
             A extends VaringAggregate<R, G, M, A> & Merging<R,G,M>
         > extends Coordinate.VaringAggregate<R, G, M, A> implements Merging<R,G,M> {
-        private double distance;
+        private double distance = 0d;
         @Override public double getDistance() {
             return distance;
         }
@@ -140,15 +140,30 @@ abstract public class CoordinateDistance<
     }
 
     @Override
-    void stringifyPoint(Appendable sw, R point){
-        try {
-            if(point==null) {
-                sw.append("null");
-            }else{
-                sw.append('[').append(""+point.getLat()).append(':').append(""+point.getLng()).append("(").append(""+point.getDistance()).append(")]");
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+    protected void interpolate(R from, R to, double fraction, W result) {
+        result.setDistance(to.getDistance()*fraction);
+        {
+            double fVal = from.getLat();
+            result.setLat(fVal + (to.getLat() - fVal) * fraction);
+        }
+        {
+            double fVal = from.getLng();
+            result.setLng(fVal + (to.getLng() - fVal) * fraction);
+        }
+    }
+
+    @Override
+    void stringifyPoint(Appendable sw, R point) throws IOException {
+        if(point==null) {
+            sw.append("null");
+        }else{
+            sw.append('[');
+            stringifyDouble(sw, point.getLat());
+            sw.append(':');
+            stringifyDouble(sw, point.getLng());
+            sw.append('(');
+            stringifyDouble(sw, point.getDistance());
+            sw.append(")]");
         }
     }
 }
