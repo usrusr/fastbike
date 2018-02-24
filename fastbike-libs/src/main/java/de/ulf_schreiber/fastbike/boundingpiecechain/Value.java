@@ -372,7 +372,7 @@ public abstract class Value<
                     break;
                 }
             }
-            toAddList.add(new Piece(points));
+            if(points.iterator().hasNext()) toAddList.add(new Piece(points));
             while(pit.hasNext() && toRemove > precision){
                 Piece cur = pit.next();
                 double plen = cur.bounds.getDistance();
