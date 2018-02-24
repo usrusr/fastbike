@@ -1,1 +1,1 @@
-include ':app', ':fastbike-libs'
+include ':app', ':fastbike-lib', ':fastbike-core'

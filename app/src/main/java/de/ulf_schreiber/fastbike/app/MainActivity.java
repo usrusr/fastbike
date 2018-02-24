@@ -3,7 +3,6 @@ package de.ulf_schreiber.fastbike.app;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
-import android.support.design.widget.Snackbar;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -12,10 +11,16 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.TextView;
+import de.ulf_schreiber.fastbike.android.BrouterClientAndroid;
 
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
+
+
+    BrouterClientAndroid client;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,13 +28,25 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
+        final TextView textView = findViewById(R.id.helloworld);
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        client = new BrouterClientAndroid(MainActivity.this);
+
+
         fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+            @Override public void onClick(View view) {
+
+//                if(client==null){
+//                    client = new BrouterClientAndroid(MainActivity.this);
+//                    return;
+//                }
+
+
+
+                String call = client.call(49.485032, 11.104860, 49.556402, 11.127689);
+                String text = "received:\n\n" + call + "\n";
+                System.out.println(text);
+                textView.setText(text);
             }
         });
 
