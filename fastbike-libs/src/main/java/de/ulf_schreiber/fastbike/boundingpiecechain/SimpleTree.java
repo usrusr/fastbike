@@ -18,12 +18,12 @@ public class SimpleTree extends CoordinateDistance<
 
     @Override
     SimpleTree.ElementWriter createElementWriter() {
-        return new ElementWriter();
+        return new ElementWriter(blocksize);
     }
 
     @Override
     SimpleTree.AggregateWriter createAggregateWriter() {
-        return new AggregateWriter();
+        return new AggregateWriter(blocksize);
     }
 
     @Override
@@ -60,13 +60,13 @@ public class SimpleTree extends CoordinateDistance<
             extends Value.Editor<ElementWriter,Reading,Writing,double[]>
             implements Reading, Writing
     {
-        protected ElementWriter() {
-            super(3, 3);
+        protected ElementWriter(int blocksize) {
+            super(3, blocksize);
         }
 
         @Override
-        public double[] createBuffer(int blocksize) {
-            return new double[blocksize * 3];
+        public double[] createBuffer() {
+            return new double[size * 3];
         }
         @Override public void setDistance(double distance) {
             buffer[actualIndex + 2] = distance;
@@ -94,13 +94,13 @@ public class SimpleTree extends CoordinateDistance<
         }
     }
     static final class AggregateWriter extends Value.Editor<SimpleTree.AggregateWriter, Grouping, Merging, double[]> implements Grouping, Merging {
-        protected AggregateWriter() {
-            super(5, 5);
+        protected AggregateWriter(int blocksize) {
+            super(5, blocksize);
         }
 
         @Override
-        public double[] createBuffer(int blocksize) {
-            return new double[blocksize * 5];
+        public double[] createBuffer() {
+            return new double[size * 5];
         }
 
         @Override public double getDistance() {

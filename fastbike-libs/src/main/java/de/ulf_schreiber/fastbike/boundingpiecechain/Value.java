@@ -48,8 +48,8 @@ public abstract class Value<
     }
     class LeafNode extends Node<LeafNode> {
         LeafNode(Iterator<? extends R> it, L elemLooker, M mutableBoundsReturn) {
-            array = elemLooker.createBuffer(blocksize);
-            elemLooker.wrap(array, blocksize,0);
+            array = elemLooker.createBuffer();
+            elemLooker.wrap(array, 0);
             while(it.hasNext() && elements < blocksize){
                 R next = it.next();
                 copy(next, elemLooker.write());
@@ -66,7 +66,7 @@ public abstract class Value<
             if(builder.toVisit < precision) return;
 
             L looker = builder.valueLooker;
-            looker.wrap(array, builder.tree().blocksize, 0);
+            looker.wrap(array, 0);
 
             for(int i=0;i<elements;i++){
                 double dist = looker.read().getDistance();
@@ -129,10 +129,10 @@ public abstract class Value<
          */
         GroupNode(Iterator<? extends R> it, L elemLooker, A groupLooker, M mutableBoundsReturn, Node<?> firstChild, int depth){
             children = new Node[blocksize];
-            array = groupLooker.createBuffer(blocksize);
+            array = groupLooker.createBuffer();
             this.depth = depth;
 
-            groupLooker.wrap(array, blocksize, 0);
+            groupLooker.wrap(array, 0);
 
             if(firstChild!=null) { // creating a new root
                 children[0]=firstChild;
@@ -151,7 +151,7 @@ public abstract class Value<
                 } else {
                     clearMerge(mutableBoundsReturn);
                     newNode = new GroupNode(it, elemLooker, groupLooker, mutableBoundsReturn, null, depth-1);
-                    groupLooker.wrap(array, blocksize, 0);
+                    groupLooker.wrap(array, 0);
                     groupLooker.moveAbsolute(elements);
                     clearMerge(groupLooker.write()); // need to clear, because we need to start with NaN bounds instead of 0d
                     extendBy(groupLooker.write(), mutableBoundsReturn.read());
@@ -161,7 +161,7 @@ public abstract class Value<
             }
 
             clearMerge(mutableBoundsReturn);
-            groupLooker.wrap(array, blocksize, 0);
+            groupLooker.wrap(array, 0);
             for(int i=0; i<elements;i++){
                 groupLooker.moveAbsolute(i);
                 extendBy(mutableBoundsReturn, groupLooker.read());
@@ -174,7 +174,7 @@ public abstract class Value<
             if(builder.toVisit < precision) return;
 
             A groupLooker = builder.groupLooker;
-            groupLooker.wrap(array, blocksize, 0);
+            groupLooker.wrap(array, 0);
 //            clearMerge(builder.result);
             G read = groupLooker.read();
             for(int i=0; i<elements;i++){
@@ -215,9 +215,44 @@ public abstract class Value<
         final G bounds;
         final Node<?> root;
         final double offset; // length is contained in bounds
-        Piece(Node<?> root, double offset, double distance) {
-            this.root = root;
-            this.offset = offset;
+        private Piece(Node<?> rootIn, double offsetIn, double distance) {
+
+            // try to identify a descendant node that is big enough to satisfy offsetIn and distance
+            if(GroupNode.class.isInstance(rootIn)){
+                A looker = createAggregateWriter();
+                GroupNode cur = GroupNode.class.cast(rootIn);
+                while(true){
+                    looker.wrap(cur.array, 0);
+                    double thisLevelOffset = offsetIn;
+
+                    Node<?> fittingChild = null;
+                    for(int i = 0;i<cur.elements;i++){
+                        looker.moveAbsolute(i);
+                        double childDistance = looker.read().getDistance();
+                        if(thisLevelOffset + precision > childDistance){
+                            thisLevelOffset-=childDistance;
+                        }else{
+                            if(childDistance + precision > thisLevelOffset+distance){
+                                fittingChild=cur.children[i];
+                            }else{
+                                // cur is the most narrow we have
+                            }
+                            break;
+                        }
+                    }
+
+                    if( ! GroupNode.class.isInstance(fittingChild)){
+                        break;
+                    }
+                    cur = GroupNode.class.cast(fittingChild);
+                    offsetIn = thisLevelOffset;
+                }
+                rootIn = cur;
+            }
+
+
+            this.offset = offsetIn;
+            this.root = rootIn;
 
             BoundingBuilder boundingBuilder = new BoundingBuilder(offset, distance);
             root.build(boundingBuilder);
@@ -240,6 +275,8 @@ public abstract class Value<
             offset = 0;
             bounds = mutableBounds.read();
         }
+
+
 
     }
     class Undo{
@@ -344,7 +381,7 @@ public abstract class Value<
                 toRemoveList.add(cur);
                 if(toRemove < -precision){
                     double restToAdd = -toRemove;
-                    toAddList.add(new Piece(cur.root, plen-restToAdd, restToAdd));
+                    toAddList.add(new Piece(cur.root, cur.offset+plen-restToAdd, restToAdd));
                 }
             }
         }else{
@@ -435,7 +472,7 @@ public abstract class Value<
 
         private boolean calculateNext(GroupNode node, double skip) {
             A looker = groupLooker;
-            looker.wrap(node.array, blocksize, 0);
+            looker.wrap(node.array, 0);
             for(int i=0;i<node.elements;i++){
                 double childLen = looker.read().getDistance();
                 if(childLen +precision > skip){
@@ -459,7 +496,7 @@ public abstract class Value<
             leaf=leafNode; // for next iteration
             L looker = valueLooker;
             if(doneInCur < leafNode.elements) {
-                looker.wrap(leafNode.array, blocksize, 0).moveAbsolute(doneInCur);
+                looker.wrap(leafNode.array, 0).moveAbsolute(doneInCur);
 
                 R read = looker.read();
                 while (skipIn > 0 && skip > read.getDistance()) {
@@ -692,19 +729,21 @@ public abstract class Value<
 
     static abstract class Editor<L extends Editor<L,R,W,B>,R,W,B>  {
         protected final int weight;
+        protected final int size;
 
         protected B buffer = null;
         protected int offset;
-        protected int size;
         protected int index;
         protected int actualIndex;
 
         protected final static int layerlen = 0;
         /**
-         * @param size bytes per element (as determined by implementors)
+         * @param size internal index steps per external index (as determined by implementors)
+         * @param blocksize
          */
-        protected Editor(int size, int fieldLimit) {
-            this.weight = Math.min(size, fieldLimit);
+        protected Editor(int size, int blocksize) {
+            this.weight = size;
+            this.size = blocksize;
         }
 
 
@@ -712,15 +751,10 @@ public abstract class Value<
         private L asEditor(){
             return (L) this;
         }
-        final public L wrap(B buffer, int elements, int offset) {
+        final public L wrap(B buffer, int offset) {
             this.buffer = buffer;
             this.offset=offset;
 
-            if(buffer==null) {
-                size = 0;
-            } else {
-                size = elements;
-            }
             this.index = 0;
             this.actualIndex = 0;
             return this.asEditor();
@@ -736,10 +770,6 @@ public abstract class Value<
             return this.asEditor();
         }
 
-        final public boolean hasNext(){
-            return index<size-1;
-        }
-
         final public L moveAbsolute(int next) {
             if(next < 0 || next >= size) {
                 throw new IndexOutOfBoundsException();
@@ -749,14 +779,7 @@ public abstract class Value<
             return this.asEditor();
         }
 
-        final public int size() {
-            return size;
-        }
-        int field(int fieldOffset){
-            return actualIndex + fieldOffset;
-        }
-
-        public abstract B createBuffer(int blocksize);
+        public abstract B createBuffer();
 
         public abstract W write();
 
