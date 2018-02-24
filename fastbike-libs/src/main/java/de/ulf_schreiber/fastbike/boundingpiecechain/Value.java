@@ -308,8 +308,8 @@ public abstract class Value<
     public void insert(double from, Iterable<? extends R> points){
         replace(from, 0, points);
     }
-    public void delete(double wrap, double distance){
-        replace(wrap, distance, Collections.<R>emptyList());
+    public void delete(double from, double distance){
+        replace(from, distance, Collections.<R>emptyList());
     }
     public void replace(double from, double distance, Iterable<? extends R> points){
         List<Piece> toRemoveList = new ArrayList<>();
@@ -330,7 +330,7 @@ public abstract class Value<
                     pit.previous(); // add cur to toRemoveList in the next while loop
                     if(toSkip > precision){
                         // add partial copy of first removed
-                        toAddList.add(new Piece(cur.root, 0, toSkip));
+                        toAddList.add(new Piece(cur.root, cur.offset, toSkip));
                     }
                     break;
                 }

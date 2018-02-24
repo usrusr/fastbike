@@ -225,8 +225,8 @@ public class SimpleTreeTest {
     }
 
     private void same(SimpleTree tree, String expected) {
-            String is = tree.join("\n");
-            String should = expected.replace("][", "]\n[");
+            String is = tree.join("\n").trim();
+            String should = expected.replace("][", "]\n[").trim();
             if( ! should.equals(is)){
                 throw new ComparisonFailure("tree not as expected" +
                         "\n  expected: " + JSONFunctions.quote(should) +
@@ -338,6 +338,53 @@ public class SimpleTreeTest {
                 "[__.63:19.38(__.88)]" +
                 "[_0.__:20.__(__.88)]" +
                 ""));
+
+    }
+   @Test public void shortenedPiece() {
+        SimpleTree tree = new TestTree(3);
+       System.out.println("test: ");
+        {
+            List<Point> line = line(0, 0, 10, 10, 25);
+            tree.append(line);
+        }
+
+        tree.delete(0, 5);
+
+        same(tree, "" +
+                "[_3.85:_3.85(__.44)]\n" +
+                "[_4.23:_4.23(__.54)]\n" +
+                "[_4.62:_4.62(__.54)]\n" +
+                "[_5.__:_5.__(__.54)]\n" +
+                "[_5.38:_5.38(__.54)]\n" +
+                "[_5.77:_5.77(__.54)]\n" +
+                "[_6.15:_6.15(__.54)]\n" +
+                "[_6.54:_6.54(__.54)]\n" +
+                "[_6.92:_6.92(__.54)]\n" +
+                "[_7.31:_7.31(__.54)]\n" +
+                "[_7.69:_7.69(__.54)]\n" +
+                "[_8.08:_8.08(__.54)]\n" +
+                "[_8.46:_8.46(__.54)]\n" +
+                "[_8.85:_8.85(__.54)]\n" +
+                "[_9.23:_9.23(__.54)]\n" +
+                "[_9.62:_9.62(__.54)]\n" +
+                "[10.__:10.__(__.54)]\n" +
+                "");
+
+        System.out.println("tree1:\n" + tree);
+
+
+       tree.delete(3, Double.MAX_VALUE);
+       System.out.println("tree2:\n" + tree);
+       same(tree, "" +
+               "[_3.85:_3.85(__.44)]\n" +
+               "[_4.23:_4.23(__.54)]\n" +
+               "[_4.62:_4.62(__.54)]\n" +
+               "[_5.__:_5.__(__.54)]\n" +
+               "[_5.38:_5.38(__.54)]\n" +
+               "[_5.66:_5.66(__.39)]" +
+               "");
+
+       System.out.println("tree2:\n" + tree);
 
     }
 
