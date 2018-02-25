@@ -1,8 +1,5 @@
-package de.ulf_schreiber.fastbike.core;
+package de.ulf_schreiber.fastbike.boundingpiecechain;
 
-
-import de.ulf_schreiber.fastbike.boundingpiecechain.BaseTree;
-import de.ulf_schreiber.fastbike.boundingpiecechain.CoordinateDistanceHeight;
 
 public class Route extends CoordinateDistanceHeight<
         Route,
@@ -38,10 +35,10 @@ public class Route extends CoordinateDistanceHeight<
     protected Writing createMutableVal() {
         return new MutableVal();
     }
-    Reading immutable(double lat, double lng, double distance, double height){
+    public Reading immutable(double lat, double lng, double distance, double height){
         Writing mutableVal = createMutableVal();
         mutableVal.setLat(lat);
-        mutableVal.setLng(lng);
+        mutableVal.setLon(lng);
         mutableVal.setDistance(distance);
         mutableVal.setHeight(height);
         return mutableVal.read();
@@ -55,18 +52,18 @@ public class Route extends CoordinateDistanceHeight<
     protected interface Merging extends CoordinateDistanceHeight.Merging<Reading,Grouping,Merging>, CoordinateDistanceHeight.Grouping<Reading,Grouping>{
     }
 
-    static class MutableBounds extends VaringAggregate<
+    protected static class MutableBounds extends VaringAggregate<
             Reading, Grouping, Merging, MutableBounds
     > implements Merging{
 
     }
-    static class MutableVal extends Varing<
+    protected static class MutableVal extends Varing<
             Reading, Writing, MutableVal
     > implements Writing{
 
     }
 
-    static final class ElementWriter
+    protected static final class ElementWriter
             extends BaseTree.Editor<ElementWriter,Reading,Writing,double[]>
             implements Reading, Writing
     {
@@ -84,7 +81,7 @@ public class Route extends CoordinateDistanceHeight<
         @Override public void setLat(double latitude) {
             buffer[actualIndex + 0] = latitude;
         }
-        @Override public void setLng(double longitude) {
+        @Override public void setLon(double longitude) {
             buffer[actualIndex + 1] = longitude;
         }
         @Override public double getDistance() {
@@ -93,7 +90,7 @@ public class Route extends CoordinateDistanceHeight<
         @Override public double getLat() {
             return buffer[actualIndex + 0];
         }
-        @Override public double getLng() {
+        @Override public double getLon() {
             return buffer[actualIndex + 1];
         }
         @Override
@@ -113,7 +110,7 @@ public class Route extends CoordinateDistanceHeight<
             return this;
         }
     }
-    static final class AggregateWriter extends BaseTree.Editor<Route.AggregateWriter, Grouping, Merging, double[]> implements Grouping, Merging {
+    protected static final class AggregateWriter extends BaseTree.Editor<Route.AggregateWriter, Grouping, Merging, double[]> implements Grouping, Merging {
         protected AggregateWriter(int blocksize) {
             super(7, blocksize);
         }

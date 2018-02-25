@@ -38,24 +38,33 @@ public class SimpleTree extends CoordinateDistance<
     Reading immutable(double lat, double lng, double distance){
         Writing mutableVal = createMutableVal();
         mutableVal.setLat(lat);
-        mutableVal.setLng(lng);
+        mutableVal.setLon(lng);
         mutableVal.setDistance(distance);
         return mutableVal.read();
     }
 
     protected interface Reading extends CoordinateDistance.Reading<Reading> {
     }
-    protected interface Writing extends CoordinateDistance.Writing<Reading,Writing>, CoordinateDistance.Reading<Reading>{
+    protected interface Writing extends CoordinateDistance.Writing<Reading,Writing>, Reading{
     }
     protected interface Grouping extends CoordinateDistance.Grouping<Reading,Grouping>{
     }
-    protected interface Merging extends CoordinateDistance.Merging<Reading,Grouping,Merging>, CoordinateDistance.Grouping<Reading,Grouping>{
+    protected interface Merging extends CoordinateDistance.Merging<Reading,Grouping,Merging>, Grouping{
     }
 
     static class MutableBounds extends CoordinateDistance.VaringAggregate<
             Reading, Grouping, Merging, MutableBounds
     > implements Merging{
-
+        @Override
+        public String toString() {
+            return "MutableBounds{" +
+                    "distance=" + getDistance() +
+                    ", west=" + getWest() +
+                    ", north=" + getNorth() +
+                    ", east=" + getEast() +
+                    ", south=" + getSouth() +
+                    '}';
+        }
     }
     static class MutableVal extends CoordinateDistance.Varing<
             Reading, Writing, MutableVal
@@ -81,7 +90,7 @@ public class SimpleTree extends CoordinateDistance<
         @Override public void setLat(double latitude) {
             buffer[actualIndex + 0] = latitude;
         }
-        @Override public void setLng(double longitude) {
+        @Override public void setLon(double longitude) {
             buffer[actualIndex + 1] = longitude;
         }
         @Override public double getDistance() {
@@ -90,7 +99,7 @@ public class SimpleTree extends CoordinateDistance<
         @Override public double getLat() {
             return buffer[actualIndex + 0];
         }
-        @Override public double getLng() {
+        @Override public double getLon() {
             return buffer[actualIndex + 1];
         }
         @Override public Reading read() {

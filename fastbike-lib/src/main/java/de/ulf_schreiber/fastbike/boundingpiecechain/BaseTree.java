@@ -44,15 +44,18 @@ public abstract class BaseTree<
 
         B array;
         int elements = 0;
+
         abstract void build(BoundingBuilder builder);
         abstract int depth();
 
         protected abstract boolean calculateNext(NodeIterator state, double skip);
+
+        abstract protected R getLastPoint();
     }
     class LeafNode extends Node<LeafNode> {
         LeafNode(Iterator<? extends R> it, L elemLooker, M mutableBoundsReturn) {
             array = elemLooker.createBuffer();
-            elemLooker.wrap(array, 0);
+            elemLooker.wrap(array);
             while(it.hasNext() && elements < blocksize){
                 R next = it.next();
                 copy(next, elemLooker.write());
@@ -69,7 +72,7 @@ public abstract class BaseTree<
             if(builder.toVisit < precision) return;
 
             L looker = builder.valueLooker;
-            looker.wrap(array, 0);
+            looker.wrap(array);
 
             for(int i=0;i<elements;i++){
                 double dist = looker.read().getDistance();
@@ -103,9 +106,12 @@ public abstract class BaseTree<
             }
         }
 
-        @Override
-        protected boolean calculateNext(NodeIterator state, final double skipIn) {
+        @Override protected boolean calculateNext(NodeIterator state, final double skipIn) {
             return state.calculateNext(this, skipIn);
+        }
+
+        @Override protected R getLastPoint() {
+            return copy(createElementWriter().wrap(array).moveAbsolute(elements - 1).read()).read();
         }
     }
 
@@ -135,7 +141,7 @@ public abstract class BaseTree<
             array = groupLooker.createBuffer();
             this.depth = depth;
 
-            groupLooker.wrap(array, 0);
+            groupLooker.wrap(array);
 
             if(firstChild!=null) { // creating a new root
                 children[0]=firstChild;
@@ -154,7 +160,7 @@ public abstract class BaseTree<
                 } else {
                     clearMerge(mutableBoundsReturn);
                     newNode = new GroupNode(it, elemLooker, groupLooker, mutableBoundsReturn, null, depth-1);
-                    groupLooker.wrap(array, 0);
+                    groupLooker.wrap(array);
                     groupLooker.moveAbsolute(elements);
                     clearMerge(groupLooker.write()); // need to clear, because we need to start with NaN bounds instead of 0d
                     extendBy(groupLooker.write(), mutableBoundsReturn.read());
@@ -164,11 +170,12 @@ public abstract class BaseTree<
             }
 
             clearMerge(mutableBoundsReturn);
-            groupLooker.wrap(array, 0);
+            groupLooker.wrap(array);
             for(int i=0; i<elements;i++){
                 groupLooker.moveAbsolute(i);
                 extendBy(mutableBoundsReturn, groupLooker.read());
             }
+
         }
 
         @Override
@@ -177,7 +184,7 @@ public abstract class BaseTree<
             if(builder.toVisit < precision) return;
 
             A groupLooker = builder.groupLooker;
-            groupLooker.wrap(array, 0);
+            groupLooker.wrap(array);
 //            clearMerge(builder.result);
             G read = groupLooker.read();
             for(int i=0; i<elements;i++){
@@ -205,8 +212,17 @@ public abstract class BaseTree<
         protected boolean calculateNext(NodeIterator state, double skip) {
             return state.calculateNext(this, skip);
         }
-    }
 
+        @Override protected R getLastPoint() {
+            return children[elements-1].getLastPoint();
+        }
+
+    }
+    W copy(R from) {
+        W val = createMutableVal();
+        copy(from, val);
+        return val;
+    }
     protected V self(){
         return (V) this;
     }
@@ -218,6 +234,7 @@ public abstract class BaseTree<
         final G bounds;
         final Node<?> root;
         final double offset; // length is contained in bounds
+        final R lastPoint;
         private Piece(Node<?> rootIn, double offsetIn, double distance) {
 
             // try to identify a descendant node that is big enough to satisfy offsetIn and distance
@@ -225,7 +242,7 @@ public abstract class BaseTree<
                 A looker = createAggregateWriter();
                 GroupNode cur = GroupNode.class.cast(rootIn);
                 while(true){
-                    looker.wrap(cur.array, 0);
+                    looker.wrap(cur.array);
                     double thisLevelOffset = offsetIn;
 
                     Node<?> fittingChild = null;
@@ -260,9 +277,10 @@ public abstract class BaseTree<
             BoundingBuilder boundingBuilder = new BoundingBuilder(offset, distance);
             root.build(boundingBuilder);
             bounds = boundingBuilder.result.read();
+            lastPoint = boundingBuilder.lastVisited.read();
         }
 
-        Piece(Iterable<? extends R> iterable){
+        Piece(Iterable<? extends R> iterable) {
             L elemLooker = createElementWriter();
             A groupLooker = createAggregateWriter();
             Iterator<? extends R> it = iterable.iterator();
@@ -270,17 +288,19 @@ public abstract class BaseTree<
             LeafNode first = new LeafNode(it, elemLooker, mutableBounds);
             Node tmpRoot = first;
             int depth = 0;
-            while(it.hasNext()){
+            while (it.hasNext()) {
                 depth++;
                 tmpRoot = new GroupNode(it, elemLooker, groupLooker, mutableBounds, tmpRoot, depth);
             }
             root = tmpRoot;
             offset = 0;
             bounds = mutableBounds.read();
+            lastPoint = root.getLastPoint();
         }
 
-
-
+        R getLastPoint(){
+            return lastPoint;
+        }
     }
     class Undo{
         final int skip;
@@ -339,7 +359,7 @@ public abstract class BaseTree<
     }
 
 
-    private final LinkedList<Piece> pieces = new LinkedList<>();
+    final LinkedList<Piece> pieces = new LinkedList<>();
     private final LinkedList<Undo> undos = new LinkedList<>();
     private final LinkedList<Undo> redos = new LinkedList<>();
     public void append(Iterable<? extends R> points){
@@ -475,7 +495,7 @@ public abstract class BaseTree<
 
         private boolean calculateNext(GroupNode node, double skip) {
             A looker = groupLooker;
-            looker.wrap(node.array, 0);
+            looker.wrap(node.array);
             for(int i=0;i<node.elements;i++){
                 double childLen = looker.read().getDistance();
                 if(childLen +precision > skip){
@@ -499,7 +519,7 @@ public abstract class BaseTree<
             leaf=leafNode; // for next iteration
             L looker = valueLooker;
             if(doneInCur < leafNode.elements) {
-                looker.wrap(leafNode.array, 0).moveAbsolute(doneInCur);
+                looker.wrap(leafNode.array).moveAbsolute(doneInCur);
 
                 R read = looker.read();
                 while (skipIn > 0 && skip > read.getDistance()) {
@@ -569,8 +589,8 @@ public abstract class BaseTree<
         }
     }
 
-    protected void interpolate(R from, R to, double fraction, W result){
-
+    protected W interpolate(R from, R to, double fraction, W result){
+        return result;
     }
 
     @Override
@@ -729,7 +749,6 @@ public abstract class BaseTree<
         protected final int size;
 
         protected B buffer = null;
-        protected int offset;
         protected int index;
         protected int actualIndex;
 
@@ -748,9 +767,8 @@ public abstract class BaseTree<
         private L asEditor(){
             return (L) this;
         }
-        final public L wrap(B buffer, int offset) {
+        final public L wrap(B buffer) {
             this.buffer = buffer;
-            this.offset=offset;
 
             this.index = 0;
             this.actualIndex = 0;
@@ -763,7 +781,7 @@ public abstract class BaseTree<
                 throw new IndexOutOfBoundsException();
             }
             index = next;
-            actualIndex = offset + index*weight;
+            actualIndex = index*weight;
             return this.asEditor();
         }
 
@@ -772,7 +790,7 @@ public abstract class BaseTree<
                 throw new IndexOutOfBoundsException();
             }
             index = next;
-            actualIndex = offset + index*weight;
+            actualIndex = index*weight;
             return this.asEditor();
         }
 
@@ -813,4 +831,10 @@ public abstract class BaseTree<
             return (M) this;
         }
     }
+
+
+    protected boolean overlaps(G one, G other){
+        return true;
+    }
+
 }

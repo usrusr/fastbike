@@ -1,6 +1,7 @@
 package de.ulf_schreiber.fastbike.boundingpiecechain;
 
 import jdk.nashorn.internal.runtime.JSONFunctions;
+import org.junit.Assert;
 import org.junit.ComparisonFailure;
 import org.junit.Test;
 
@@ -11,6 +12,7 @@ import java.util.Locale;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class SimpleTreeTest {
     @Test public void appendUndoRedo(){
@@ -339,7 +341,7 @@ public class SimpleTreeTest {
                 ""));
 
     }
-   @Test public void shortenedPiece() {
+    @Test public void shortenedPiece() {
        TestTree tree = new TestTree(3);
        System.out.println("test: ");
         {
@@ -372,9 +374,9 @@ public class SimpleTreeTest {
         System.out.println("tree1:\n" + tree);
 
 
-       tree.delete(3, Double.MAX_VALUE);
-       System.out.println("tree2:\n" + tree);
-       same(tree, "" +
+        tree.delete(3, Double.MAX_VALUE);
+        System.out.println("tree2:\n" + tree);
+        same(tree, "" +
                "[_3.85:_3.85(__.44)]\n" +
                "[_4.23:_4.23(__.54)]\n" +
                "[_4.62:_4.62(__.54)]\n" +
@@ -383,26 +385,24 @@ public class SimpleTreeTest {
                "[_5.66:_5.66(__.39)]" +
                "");
 
-       System.out.println("tree2:\n" + tree);
+        System.out.println("tree2:\n" + tree);
 
     }
 
 
-
-
     private List<SimpleTree.Reading> line(int x0, int y0, int x1, int y1, int intermediateSteps, SimpleTree tree) {
-        intermediateSteps = Math.max(0,intermediateSteps);
+        intermediateSteps = Math.max(0, intermediateSteps);
         ArrayList<TestTree.Reading> points = new ArrayList<>(intermediateSteps + 2);
-        points.add(tree.immutable(x0,y0,0));
+        points.add(tree.immutable(x0, y0, 0));
 
         double xd = x1 - x0;
         double yd = y1 - y0;
         int steps = intermediateSteps + 1;
-        double dd = Math.sqrt(xd*xd+yd*yd) / steps;
-        double sx = xd/steps;
-        double sy = yd/steps;
-        for(int i=1;i<=intermediateSteps;i++){
-            points.add(tree.immutable(x0+sx*i, y0+sy*i, dd));
+        double dd = Math.sqrt(xd * xd + yd * yd) / steps;
+        double sx = xd / steps;
+        double sy = yd / steps;
+        for (int i = 1; i <= intermediateSteps; i++) {
+            points.add(tree.immutable(x0 + sx * i, y0 + sy * i, dd));
         }
         points.add(tree.immutable(x1, y1, dd));
 
@@ -410,29 +410,81 @@ public class SimpleTreeTest {
     }
 
 
-
-
     private static class TestTree extends SimpleTree {
         public TestTree() {
             this(16);
         }
+
         public TestTree(int blockSize) {
-            super(blockSize,0.00001d);
+            super(blockSize, 0.00001d);
         }
+
         @Override
         protected void stringifyDouble(Appendable sw, double val) throws IOException {
             sw.append(
                     String.format(Locale.ENGLISH, "%5.2f", val)
-                    .replace(" 0","  ").replace(" ", "_")
-                    .replaceAll("0(?=0*$)","_")
-                    .replace("__.__", "_0.__")
+                            .replace(" 0", "  ").replace(" ", "_")
+                            .replaceAll("0(?=0*$)", "_")
+                            .replace("__.__", "_0.__")
             );
         }
     }
 
+    TestTree tree = new TestTree();
+
+    @Test public void pacificBounds() {
+        SimpleTree.Merging bounds = tree.createMutableBounds();
+        tree.extendBy(bounds, tree.immutable(1, 175, 0));
+        tree.extendBy(bounds, tree.immutable(0, 178, 0));
+        tree.extendBy(bounds, tree.immutable(0, -173, 0));
+        tree.extendBy(bounds, tree.immutable(0, -174, 0));
+        System.out.println("bounds: " + bounds);
+
+        assertTrue(bounds.getWest() < bounds.getEast());
+
+        SimpleTree.Merging bounds2 = tree.createMutableBounds();
+        tree.extendBy(bounds2, tree.immutable(1, -170, 0));
+        tree.extendBy(bounds2, tree.immutable(0, -179, 0));
+        System.out.println("bounds2: " + bounds2);
+        assertTrue(bounds2.getWest() < bounds2.getEast());
 
 
+        SimpleTree.Merging bounds3 = tree.createMutableBounds();
+        tree.extendBy(bounds3, tree.immutable(1, 176, 0));
+        tree.extendBy(bounds3, tree.immutable(0, 178, 0));
+        System.out.println("bounds3: " + bounds3);
+        assertTrue(bounds3.getWest() < bounds3.getEast());
+
+        Assert.assertFalse(tree.overlaps(bounds3, bounds2));
+        Assert.assertTrue(tree.overlaps(bounds3, bounds));
+        Assert.assertTrue(tree.overlaps(bounds2, bounds));
 
 
+        SimpleTree.Merging bounds4 = tree.createMutableBounds();
+        tree.extendBy(bounds4, tree.immutable(1, -178, 0));
+        System.out.println("bounds4: " + bounds4);
+        Assert.assertTrue(tree.overlaps(bounds4, bounds2));
+        Assert.assertTrue(tree.overlaps(bounds4, bounds));
+        Assert.assertFalse(tree.overlaps(bounds4, bounds3));
+    }
+    @Test public void pacificBoundsWrapFails() {
+
+        SimpleTree.Merging wideSlightlyNeg = tree.createMutableBounds();
+        tree.extendBy(wideSlightlyNeg, tree.immutable(1,-90, 0));
+        tree.extendBy(wideSlightlyNeg, tree.immutable(1,0, 0));
+        tree.extendBy(wideSlightlyNeg, tree.immutable(1,90, 0));
+        tree.extendBy(wideSlightlyNeg, tree.immutable(1,-130, 0));
+        tree.extendBy(wideSlightlyNeg, tree.immutable(1,130, 0));
+        tree.extendBy(wideSlightlyNeg, tree.immutable(1,-170, 0));
+        tree.extendBy(wideSlightlyNeg, tree.immutable(1,150, 0));
+        tree.extendBy(wideSlightlyNeg, tree.immutable(1,160, 0));
+        tree.extendBy(wideSlightlyNeg, tree.immutable(1,170, 0));
+
+        SimpleTree.Merging narrowSlightlyPos = tree.createMutableBounds();
+        tree.extendBy(narrowSlightlyPos, tree.immutable(1,5, 0));
+        tree.extendBy(narrowSlightlyPos, tree.immutable(1,15, 0));
+
+        Assert.assertTrue(tree.overlaps(wideSlightlyNeg, narrowSlightlyPos));
+    }
 
 }

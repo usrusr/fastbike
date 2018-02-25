@@ -85,9 +85,10 @@ abstract public class CoordinateDistanceHeight<
     }
 
     @Override
-    protected void interpolate(R from, R to, double fraction, W result) {
+    protected W interpolate(R from, R to, double fraction, W result) {
         super.interpolate(from, to, fraction, result);
         result.setHeight(to.getHeight()*fraction);
+        return result;
     }
 
     @Override
@@ -98,7 +99,7 @@ abstract public class CoordinateDistanceHeight<
             sw.append('[');
             stringifyDouble(sw, point.getLat());
             sw.append(':');
-            stringifyDouble(sw, point.getLng());
+            stringifyDouble(sw, point.getLon());
             sw.append('(');
             stringifyDouble(sw, point.getDistance());
             sw.append('^');

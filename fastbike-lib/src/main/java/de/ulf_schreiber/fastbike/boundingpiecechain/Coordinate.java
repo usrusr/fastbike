@@ -18,11 +18,17 @@ public abstract class Coordinate<
         super(blocksize, precision);
     }
 
+    double projectedDistance(R a, R b){
+        double dLat = a.getLat() - b.getLat();
+        double dLon = a.getLon() - b.getLon();
+        return Math.sqrt(dLat*dLat+dLon*dLon);
+    }
+
     protected interface Reading<
             R extends Reading<R>
             > extends BaseTree.Reading<R> {
         double getLat();
-        double getLng();
+        double getLon();
     }
 
     protected interface Writing<
@@ -30,7 +36,7 @@ public abstract class Coordinate<
             W extends Writing<R,W>
             > extends Reading<R>, BaseTree.Writing<R,W> {
         void setLat(double latitude);
-        void setLng(double longitude);
+        void setLon(double longitude);
     }
 
     protected interface Grouping<
@@ -56,14 +62,14 @@ public abstract class Coordinate<
     }
     @Override boolean sameAs(R one, R other) {
         return
-                Math.abs(one.getLng() - other.getLng()) < precision
+                Math.abs(one.getLon() - other.getLon()) < precision
                         && Math.abs(one.getLat() - other.getLat()) < precision
                 ;
     }
 
     @Override W clearWrite(W toClear) {
         toClear.setLat(Double.NaN);
-        toClear.setLng(Double.NaN);
+        toClear.setLon(Double.NaN);
         return super.clearWrite(toClear);
     }
 
@@ -78,7 +84,7 @@ public abstract class Coordinate<
 
     @Override void copy(R from, W to) {
         to.setLat(from.getLat());
-        to.setLng(from.getLng());
+        to.setLon(from.getLon());
         super.copy(from, to);
     }
 
@@ -88,7 +94,7 @@ public abstract class Coordinate<
 //        double south = box.getSouth();
 //        if(Double.isNaN(south)) return false;
 //        if(lat < south -precision || lat > box.getNorth()+precision) return false;
-//        double lng = point.getLng();
+//        double lng = point.getLon();
 //        double east = box.getEast() + precision;
 //        double west = box.getWest() -precision;
 //        if(lng>=west && lng<= east) return true;
@@ -109,7 +115,7 @@ public abstract class Coordinate<
         toExtend.setNorth(max(toExtend.getNorth(), lat));
         toExtend.setSouth(min(toExtend.getSouth(), lat));
 
-        double lng = point.getLng();
+        double lng = point.getLon();
 
         double myEast = toExtend.getEast();
         double myWest = toExtend.getWest();
@@ -159,21 +165,22 @@ public abstract class Coordinate<
             sw.append('[');
             stringifyDouble(sw, point.getLat());
             sw.append(':');
-            stringifyDouble(sw, point.getLng());
+            stringifyDouble(sw, point.getLon());
             sw.append(']');
         }
     }
     @Override
-    protected void interpolate(R from, R to, double fraction, W result) {
+    protected W interpolate(R from, R to, double fraction, W result) {
         {
             double fVal = from.getLat();
             result.setLat(fVal + (to.getLat() - fVal) * fraction);
         }
         {
-            double fVal = from.getLng();
-            result.setLng(fVal + (to.getLng() - fVal) * fraction);
+            double fVal = from.getLon();
+            result.setLon(fVal + (to.getLon() - fVal) * fraction);
         }
         super.interpolate(from, to, fraction, result);
+        return result;
     }
 
 
@@ -188,13 +195,13 @@ public abstract class Coordinate<
         @Override final public double getLat() {
             return lat;
         }
-        @Override final public double getLng() {
+        @Override final public double getLon() {
             return lng;
         }
         @Override final public void setLat(double latitude) {
             this.lat = latitude;
         }
-        @Override final public void setLng(double longitude) {
+        @Override final public void setLon(double longitude) {
             this.lng = longitude;
         }
 
@@ -238,4 +245,65 @@ public abstract class Coordinate<
         }
     }
 
+    @Override
+    protected boolean overlaps(G one, G other) {
+        // no super call, because super call is better safe than sorry, always true
+        if(one.getNorth() < other.getSouth()) return false;
+        if(one.getSouth() > other.getNorth()) return false;
+
+        /*
+        w10e20 w15e25 t
+        w10e20 w25e35 f
+
+        w170e180 w-175e-165 f?
+        w170e180 w-185e-175 t?
+        */
+        double east1 = one.getEast();
+        double west1 = one.getWest();
+        
+        double west2 = other.getWest();
+        double east2 = other.getEast();
+
+        while(west1-west2 < -180) {
+            east1+=360;
+            west1+=360;
+        }
+        while(west2-west1<-180) {
+            east2 += 360;
+            west2 += 360;
+        }
+
+        if(east1 < west2) return false;
+        if(west1 > east2) return false;
+
+        if(east1 < west2) return false;
+        if(west1 > east2) return false;
+
+        return true;
+    }
+
+    protected boolean contains(G one, R other) {
+        double lat = other.getLat();
+        if(one.getNorth() < lat) return false;
+        if(one.getSouth() > lat) return false;
+
+        double east1 = one.getEast();
+        double west1 = one.getWest();
+
+        double west2 = other.getLon();
+
+        while(west1-west2 < -180) {
+            east1+=360;
+            west1+=360;
+        }
+        while(west2-west1<-180) {
+            west2 += 360;
+        }
+
+
+        if(east1 < west2) return false;
+        if(west1 > west2) return false;
+
+        return true;
+    }
 }
