@@ -15,16 +15,19 @@ import java.util.ListIterator;
  * @param <W>  element setters
  * @param <G> group of elements getters
  * @param <M> group of elements setters
+ * @param <B> backing type for compact memory representation (e.g. double[])
+ * @param <L> editor for reading/writing elements in B
+ * @param <M> editor for reading/writing groups in B
  */
-public abstract class Value<
-        V extends Value<V,R,W,G,M,B,L,A>,
-        R extends Value.Reading<R>,
-        W extends Value.Writing<R,W> & Value.Reading<R>,
-        G extends Value.Grouping<R,G>,
-        M extends Value.Merging<R,G,M> & Value.Grouping<R,G>,
+public abstract class BaseTree<
+        V extends BaseTree<V,R,W,G,M,B,L,A>,
+        R extends BaseTree.Reading<R>,
+        W extends BaseTree.Writing<R,W> & BaseTree.Reading<R>,
+        G extends BaseTree.Grouping<R,G>,
+        M extends BaseTree.Merging<R,G,M> & BaseTree.Grouping<R,G>,
         B,
-        L extends Value.Editor<L,R,W,B>,
-        A extends Value.Editor<A,G,M,B>
+        L extends BaseTree.Editor<L,R,W,B>,
+        A extends BaseTree.Editor<A,G,M,B>
     > implements Iterable<R>{
 
 
@@ -304,7 +307,7 @@ public abstract class Value<
         }
 
         final void unapply() {
-            ListIterator<Piece> iterator = Value.this.pieces.listIterator(skip);
+            ListIterator<Piece> iterator = BaseTree.this.pieces.listIterator(skip);
             int i = removed;
             int length = undoPieces.size();
             for (; i < length; i++) {
@@ -331,7 +334,7 @@ public abstract class Value<
         }
 
         public V tree() {
-            return (V) Value.this;
+            return (V) BaseTree.this;
         }
     }
 
@@ -404,8 +407,8 @@ public abstract class Value<
             NodeIterator nodeIt = new NodeIterator();
             double curNodeDone = 0;
 
-            final W next = Value.this.createMutableVal();
-            final W cur = Value.this.createMutableVal();
+            final W next = BaseTree.this.createMutableVal();
+            final W cur = BaseTree.this.createMutableVal();
             boolean hasNext = calcNext();
 
             protected boolean calcNext(){
@@ -566,7 +569,9 @@ public abstract class Value<
         }
     }
 
-    protected abstract void interpolate(R from, R to, double fraction, W result);
+    protected void interpolate(R from, R to, double fraction, W result){
+
+    }
 
     @Override
     public String toString() {
@@ -630,14 +635,14 @@ public abstract class Value<
 
     protected final double precision;
 
-    protected Value(int blocksize, double precision) {
+    protected BaseTree(int blocksize, double precision) {
         this.blocksize = blocksize;
         this.precision = precision;
     }
 
     interface Reading <
             R extends Reading<R>
-            > {
+            > extends PublicRead {
         R read();
 
         double getDistance();
@@ -653,7 +658,7 @@ public abstract class Value<
     interface Grouping<
             R extends Reading<R>,
             G extends Grouping<R,G>
-            > {
+            > extends PublicGroup {
         G read();
 
         double getDistance();
@@ -666,25 +671,25 @@ public abstract class Value<
         M write();
     }
 
-    public interface PublicRead extends Reading<PublicRead> {
+    public interface PublicRead {
 
     }
-    public interface PublicGroup extends Grouping<PublicRead,PublicGroup> {
+    public interface PublicGroup {
 
     }
 
 
-    public boolean sameAs(R one, R other){
+    boolean sameAs(R one, R other){
         return true;
     }
-    public void copy(R from, W to){}
-    public void extendBy(M toExtend, R point){}
-    public void extendBy(M toExtend, G aggregate){};
+    void copy(R from, W to){}
+    void extendBy(M toExtend, R point){}
+    void extendBy(M toExtend, G aggregate){};
 
-    public W clearWrite(W toClear){
+    W clearWrite(W toClear){
         return toClear;
     }
-    public M clearMerge(M toClear){
+    M clearMerge(M toClear){
         return toClear;
     }
 

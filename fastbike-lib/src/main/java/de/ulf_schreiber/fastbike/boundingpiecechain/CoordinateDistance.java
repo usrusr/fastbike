@@ -9,8 +9,8 @@ abstract public class CoordinateDistance<
         G extends CoordinateDistance.Grouping<R,G> & Coordinate.Grouping<R,G>,
         M extends CoordinateDistance.Merging<R,G,M> & CoordinateDistance.Grouping<R,G> & Coordinate.Merging<R,G,M>,
         B,
-        L extends Value.Editor<L,R,W,B>,
-        A extends Value.Editor<A,G,M,B>
+        L extends BaseTree.Editor<L,R,W,B>,
+        A extends BaseTree.Editor<A,G,M,B>
         > extends Coordinate<V,R,W,G,M,B,L,A>{
 
     public CoordinateDistance(int blocksize, double precision) {
@@ -19,8 +19,7 @@ abstract public class CoordinateDistance<
 
     interface Reading <
             R extends Reading<R>
-            > extends Coordinate.Reading<R> {
-        double getDistance();
+            > extends Coordinate.Reading<R>, Read {
     }
     interface Writing<
             R extends Reading<R>,
@@ -31,8 +30,7 @@ abstract public class CoordinateDistance<
     interface Grouping<
             R extends Reading<R>,
             G extends Grouping<R,G>
-            > extends Coordinate.Grouping<R,G> {
-        double getDistance();
+            > extends Coordinate.Grouping<R,G>, Group {
     }
     interface Merging <
             R extends Reading<R>,
@@ -41,34 +39,41 @@ abstract public class CoordinateDistance<
             > extends Grouping<R,G>, Coordinate.Merging<R,G,M> {
         void setDistance(double distance);
     }
-    public interface PublicRead extends Reading<PublicRead> {
+    public interface Read extends Coordinate.Read {
+        double getDistance();
 
+        class Immutable extends Coordinate.Read.Immutable implements Read {
+            private final double distance;
+            public Immutable(double lat, double lng, double distance) {
+                super(lat, lng);
+                this.distance = distance;
+            }
+            @Override public double getDistance() {
+                return distance;
+            }
+        }
     }
-    public interface PublicGroup extends Grouping<PublicRead,PublicGroup> {
-
+    public interface Group extends Coordinate.Group {
+        double getDistance();
     }
 
 
-    @Override
-    public void copy(R from, W to) {
+    @Override void copy(R from, W to) {
         to.setDistance(from.getDistance());
         super.copy(from, to);
     }
 
-    @Override
-    public W clearWrite(W toClear) {
+    @Override W clearWrite(W toClear) {
         toClear.setDistance(0d);
         return super.clearWrite(toClear);
     }
 
-    @Override
-    public M clearMerge(M toClear) {
+    @Override M clearMerge(M toClear) {
         toClear.setDistance(0d);
         return super.clearMerge(toClear);
     }
 
-    @Override
-    public boolean sameAs(R one, R other) {
+    @Override boolean sameAs(R one, R other) {
         return Math.abs(one.getDistance() - other.getDistance()) < precision && super.sameAs(one, other);
     }
 
@@ -86,15 +91,13 @@ abstract public class CoordinateDistance<
     }
 
 
-    @Override
-    public void extendBy(M toExtend, R point) {
+    @Override void extendBy(M toExtend, R point) {
         super.extendBy(toExtend, point);
 
         toExtend.setDistance(toExtend.getDistance() + point.getDistance());
     }
 
-    @Override
-    public void extendBy(M toExtend, G other) {
+    @Override void extendBy(M toExtend, G other) {
         super.extendBy(toExtend, other);
 
         toExtend.setDistance(toExtend.getDistance() + other.getDistance());
@@ -162,6 +165,7 @@ abstract public class CoordinateDistance<
             double fVal = from.getLng();
             result.setLng(fVal + (to.getLng() - fVal) * fraction);
         }
+        super.interpolate(from, to, fraction, result);
     }
 
     @Override

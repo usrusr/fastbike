@@ -5,14 +5,14 @@ import java.io.IOException;
 /** pointless class, fold into coordinateDistance */
 public abstract class Coordinate<
         V extends Coordinate<V,R,W,G,M,B,L,A>,
-        R extends Coordinate.Reading<R> & Value.Reading<R>,
-        W extends Coordinate.Writing<R,W> & Coordinate.Reading<R> & Value.Writing<R,W>,
-        G extends Coordinate.Grouping<R,G> & Value.Grouping<R,G>,
-        M extends Coordinate.Merging<R,G,M> & Coordinate.Grouping<R,G> & Value.Merging<R,G,M>,
+        R extends Coordinate.Reading<R> & BaseTree.Reading<R>,
+        W extends Coordinate.Writing<R,W> & Coordinate.Reading<R> & BaseTree.Writing<R,W>,
+        G extends Coordinate.Grouping<R,G> & BaseTree.Grouping<R,G>,
+        M extends Coordinate.Merging<R,G,M> & Coordinate.Grouping<R,G> & BaseTree.Merging<R,G,M>,
         B,
-        L extends Value.Editor<L,R,W,B>,
-        A extends Value.Editor<A,G,M,B>
-        > extends Value<V, R, W, G, M, B, L, A> {
+        L extends BaseTree.Editor<L,R,W,B>,
+        A extends BaseTree.Editor<A,G,M,B>
+        > extends BaseTree<V, R, W, G, M, B, L, A> {
 
     public Coordinate(int blocksize, double precision) {
         super(blocksize, precision);
@@ -20,15 +20,15 @@ public abstract class Coordinate<
 
     interface Reading<
             R extends Reading<R>
-            > extends Value.Reading<R> {
-        double getLat();
-        double getLng();
+            > extends BaseTree.Reading<R> , Read {
+//        double getLat();
+//        double getLng();
     }
 
     interface Writing<
             R extends Reading<R>,
             W extends Writing<R, W>
-            > extends Reading<R>, Value.Writing<R, W> {
+            > extends Reading<R>, BaseTree.Writing<R, W> {
         void setLat(double latitude);
         void setLng(double longitude);
     }
@@ -36,49 +36,68 @@ public abstract class Coordinate<
     interface Grouping<
             R extends Reading<R>,
             G extends Grouping<R, G>
-            > extends Value.Grouping<R, G> {
+            > extends BaseTree.Grouping<R, G>, Group {
 
-        double getWest();
-        double getNorth();
-        double getEast();
-        double getSouth();
+//        double getWest();
+//        double getNorth();
+//        double getEast();
+//        double getSouth();
     }
 
     interface Merging<
             R extends Reading<R>,
             G extends Grouping<R, G>,
             M extends Merging<R, G, M>
-            > extends Grouping<R,G>, Value.Merging<R, G, M> {
+            > extends Grouping<R,G>, BaseTree.Merging<R, G, M> {
         void setWest(double west);
         void setNorth(double north);
         void setEast(double east);
         void setSouth(double south);
     }
 
-    public interface PublicRead extends Reading<PublicRead> {
+    public interface Read {
+        double getLat();
+        double getLng();
 
+        class Immutable implements Read {
+            final private double lat;
+            final private double lng;
+            public static Immutable of(double lat, double lng){
+                return new Immutable(lat, lng);
+            }
+            public Immutable(double lat, double lng) {
+                this.lat = lat;
+                this.lng = lng;
+            }
+            @Override public double getLat() {
+                return lat;
+            }
+            @Override public double getLng() {
+                return lng;
+            }
+        }
     }
 
-    public interface PublicGroup extends Grouping<PublicRead, PublicGroup> {
-
+    public interface Group {
+        double getWest();
+        double getNorth();
+        double getEast();
+        double getSouth();
     }
-    @Override
-    public boolean sameAs(R one, R other) {
+    @Override boolean sameAs(R one, R other) {
         return
                 Math.abs(one.getLng() - other.getLng()) < precision
                         && Math.abs(one.getLat() - other.getLat()) < precision
                 ;
     }
 
-    @Override
-    public W clearWrite(W toClear) {
+    @Override W clearWrite(W toClear) {
         toClear.setLat(Double.NaN);
         toClear.setLng(Double.NaN);
         return super.clearWrite(toClear);
     }
 
-    @Override
-    public M clearMerge(M toClear) {
+    @Override M clearMerge(M toClear) {
         toClear.setEast(Double.NaN);
         toClear.setWest(Double.NaN);
         toClear.setNorth(Double.NaN);
@@ -87,35 +106,33 @@ public abstract class Coordinate<
         return super.clearMerge(toClear);
     }
 
-    @Override
-    public void copy(R from, W to) {
+    @Override void copy(R from, W to) {
         to.setLat(from.getLat());
         to.setLng(from.getLng());
         super.copy(from, to);
     }
 
-    public boolean contains(Coordinate.Grouping<R, G> box, Coordinate.Reading<R> point) {
-        double lat = point.getLat();
-        if(Double.isNaN(lat)) return false;
-        double south = box.getSouth();
-        if(Double.isNaN(south)) return false;
-        if(lat < south -precision || lat > box.getNorth()+precision) return false;
-        double lng = point.getLng();
-        double east = box.getEast() + precision;
-        double west = box.getWest() -precision;
-        if(lng>=west && lng<= east) return true;
+//    public boolean contains(Coordinate.Grouping<R, G> box, Coordinate.Reading<R> point) {
+//        double lat = point.getLat();
+//        if(Double.isNaN(lat)) return false;
+//        double south = box.getSouth();
+//        if(Double.isNaN(south)) return false;
+//        if(lat < south -precision || lat > box.getNorth()+precision) return false;
+//        double lng = point.getLng();
+//        double east = box.getEast() + precision;
+//        double west = box.getWest() -precision;
+//        if(lng>=west && lng<= east) return true;
+//
+//        double lngWrapEast = lng+360;
+//        if(lngWrapEast>=west && lngWrapEast<= east) return true;
+//
+//        double lngWrapWest = lng-360;
+//        if(lngWrapWest>=west && lngWrapWest<= east) return true;
+//
+//        return true;
+//    }
 
-        double lngWrapEast = lng+360;
-        if(lngWrapEast>=west && lngWrapEast<= east) return true;
-
-        double lngWrapWest = lng-360;
-        if(lngWrapWest>=west && lngWrapWest<= east) return true;
-
-        return true;
-    }
-
-    @Override
-    public void extendBy(M toExtend, R point) {
+    @Override void extendBy(M toExtend, R point) {
         super.extendBy(toExtend, point);
         double lat = point.getLat();
         if(Double.isNaN(lat)) return;
@@ -138,8 +155,7 @@ public abstract class Coordinate<
     }
 
 
-    @Override
-    public void extendBy(M toExtend, G other) {
+    @Override void extendBy(M toExtend, G other) {
         super.extendBy(toExtend, other);
         double north = other.getNorth();
         double south = other.getSouth();
@@ -177,14 +193,25 @@ public abstract class Coordinate<
             sw.append(']');
         }
     }
-
+    @Override
+    protected void interpolate(R from, R to, double fraction, W result) {
+        {
+            double fVal = from.getLat();
+            result.setLat(fVal + (to.getLat() - fVal) * fraction);
+        }
+        {
+            double fVal = from.getLng();
+            result.setLng(fVal + (to.getLng() - fVal) * fraction);
+        }
+        super.interpolate(from, to, fraction, result);
+    }
 
 
     protected abstract static class Varing<
             R extends Reading<R>,
             W extends Writing<R,W>,
             V extends Varing<R,W,V>
-        > extends Value.Varing<R,W,V> implements Writing<R,W> {
+        > extends BaseTree.Varing<R,W,V> implements Writing<R,W> {
         private double lat = Double.NaN;
         private double lng = Double.NaN;
 
@@ -203,12 +230,13 @@ public abstract class Coordinate<
 
     }
 
+
     protected abstract static class VaringAggregate<
             R extends Reading<R>,
             G extends Grouping<R, G>,
             M extends Merging<R, G, M>,
             A extends VaringAggregate<R, G, M, A> & Merging<R,G,M>
-           > extends Value.VaringAggregate<R, G, M, A> implements Merging<R,G,M> {
+           > extends BaseTree.VaringAggregate<R, G, M, A> implements Merging<R,G,M> {
         private double west = Double.NaN;
         private double north = Double.NaN;
         private double east = Double.NaN;

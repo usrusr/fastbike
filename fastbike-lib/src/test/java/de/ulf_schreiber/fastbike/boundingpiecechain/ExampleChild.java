@@ -11,8 +11,8 @@ public abstract class ExampleChild<
         G extends ExampleChild.Grouping<R,G> & ExampleParent.Grouping<R,G>,
         M extends ExampleChild.Merging<R,G,M> & ExampleChild.Grouping<R,G> & ExampleParent.Merging<R,G,M>,
         B,
-        L extends Value.Editor<L,R,W,B>,
-        A extends Value.Editor<A,G,M,B>
+        L extends BaseTree.Editor<L,R,W,B>,
+        A extends BaseTree.Editor<A,G,M,B>
         > extends ExampleParent<V,R,W,G,M,B,L,A>{
 
     public ExampleChild(int blocksize, double precision) {
@@ -21,7 +21,7 @@ public abstract class ExampleChild<
 
     interface Reading <
             R extends Reading<R>
-            > extends ExampleParent.Reading<R> {
+            > extends ExampleParent.Reading<R>, PublicRead {
     }
     interface Writing<
             R extends Reading<R>,
@@ -31,7 +31,7 @@ public abstract class ExampleChild<
     interface Grouping<
             R extends Reading<R>,
             G extends Grouping<R,G>
-            > extends ExampleParent.Grouping<R,G> {
+            > extends ExampleParent.Grouping<R,G>, PublicGroup {
     }
     interface Merging <
             R extends Reading<R>,
@@ -39,10 +39,10 @@ public abstract class ExampleChild<
             M extends Merging<R,G,M>
             > extends Grouping<R,G>, ExampleParent.Merging<R,G,M> {
     }
-    public interface PublicRead extends Reading<PublicRead> {
+    public interface PublicRead extends ExampleParent.PublicRead{
 
     }
-    public interface PublicGroup extends Grouping<PublicRead,PublicGroup> {
+    public interface PublicGroup extends ExampleParent.PublicGroup {
 
     }
 }
