@@ -17,7 +17,7 @@ public class SimpleTreeTest {
         SimpleTree tree = new TestTree();
 
         {
-            List<Point> line = line(0, 0, 10, 0, 1);
+            List<TestTree.Reading> line = line(0, 0, 10, 0, 1, tree);
             tree.append(line);
         }
 
@@ -30,7 +30,7 @@ public class SimpleTreeTest {
                 ""));
 
         {
-            List<Point> line = line(10, 0, 20, 10, 1);
+            List<TestTree.Reading> line = line(10, 0, 20, 10, 1, tree);
             tree.append(line);
         }
         System.out.println("tree2:\n" + tree);
@@ -101,12 +101,12 @@ public class SimpleTreeTest {
         SimpleTree tree = new TestTree();
 
         {
-            List<Point> line = line(0, 0, 10, 10, 1);
+            List<TestTree.Reading> line = line(0, 0, 10, 10, 1, tree);
             tree.append(line);
         }
         System.out.println("tree0:\n" + tree);
         {
-            List<Point> line = line(10, 10, 00, 20, 1);
+            List<TestTree.Reading> line = line(10, 10, 00, 20, 1, tree);
             tree.append(line);
         }
 
@@ -122,7 +122,7 @@ public class SimpleTreeTest {
                 "");
 
         {
-            List<Point> line = line(5, 5, 5, 15, 1);
+            List<TestTree.Reading> line = line(5, 5, 5, 15, 1, tree);
             double _7_07 = Math.sqrt(50);
             tree.replace(_7_07, _7_07*2, line);
         }
@@ -145,11 +145,11 @@ public class SimpleTreeTest {
         SimpleTree tree = new TestTree();
 
         {
-            List<Point> line = line(0, 0, 10, 10, 1);
+            List<TestTree.Reading> line = line(0, 0, 10, 10, 1, tree);
             tree.append(line);
         }
         {
-            List<Point> line = line(10, 10, 00, 20, 0);
+            List<TestTree.Reading> line = line(10, 10, 00, 20, 0, tree);
             tree.append(line);
         }
 
@@ -164,7 +164,7 @@ public class SimpleTreeTest {
                 ""));
 
         {
-            List<Point> line = line(5, 5, 5, 15, 1);
+            List<TestTree.Reading> line = line(5, 5, 5, 15, 1, tree);
             double _7_07 = Math.sqrt(50);
             tree.replace(_7_07, _7_07*2, line);
         }
@@ -187,11 +187,11 @@ public class SimpleTreeTest {
         SimpleTree tree = new TestTree();
 
         {
-            List<Point> line = line(0, 0, 10, 10, 0);
+            List<TestTree.Reading> line = line(0, 0, 10, 10, 0, tree);
             tree.append(line);
         }
         {
-            List<Point> line = line(10, 10, 00, 20, 1);
+            List<TestTree.Reading> line = line(10, 10, 00, 20, 1, tree);
             tree.append(line);
         }
 
@@ -206,7 +206,7 @@ public class SimpleTreeTest {
                 ""));
 
         {
-            List<Point> line = line(5, 5, 5, 15, 1);
+            List<TestTree.Reading> line = line(5, 5, 5, 15, 1, tree);
             double _7_07 = Math.sqrt(50);
             tree.replace(_7_07, _7_07*2, line);
         }
@@ -241,12 +241,12 @@ public class SimpleTreeTest {
         SimpleTree tree = new TestTree(3);
 
         {
-            List<Point> line = line(0, 0, 10, 10, 25);
+            List<TestTree.Reading> line = line(0, 0, 10, 10, 25, tree);
             tree.append(line);
         }
         System.out.println("tree0:\n" + tree);
         {
-            List<Point> line = line(10, 10, 00, 20, 15);
+            List<TestTree.Reading> line = line(10, 10, 00, 20, 15, tree);
             tree.append(line);
         }
 
@@ -300,7 +300,7 @@ public class SimpleTreeTest {
                 ""));
 
         {
-            List<Point> line = line(5, 5, 5, 15, 4);
+            List<TestTree.Reading> line = line(5, 5, 5, 15, 4, tree);
             double _7_07 = Math.sqrt(50);
             tree.replace(_7_07, _7_07*2, line);
         }
@@ -340,10 +340,10 @@ public class SimpleTreeTest {
 
     }
    @Test public void shortenedPiece() {
-        SimpleTree tree = new TestTree(3);
+       TestTree tree = new TestTree(3);
        System.out.println("test: ");
         {
-            List<Point> line = line(0, 0, 10, 10, 25);
+            List<TestTree.Reading> line = line(0, 0, 10, 10, 25, tree);;
             tree.append(line);
         }
 
@@ -390,10 +390,10 @@ public class SimpleTreeTest {
 
 
 
-    private List<Point> line(int x0, int y0, int x1, int y1, int intermediateSteps) {
+    private List<SimpleTree.Reading> line(int x0, int y0, int x1, int y1, int intermediateSteps, SimpleTree tree) {
         intermediateSteps = Math.max(0,intermediateSteps);
-        ArrayList<Point> points = new ArrayList<>(intermediateSteps + 2);
-        points.add(new Point(x0,y0,0));
+        ArrayList<TestTree.Reading> points = new ArrayList<>(intermediateSteps + 2);
+        points.add(tree.immutable(x0,y0,0));
 
         double xd = x1 - x0;
         double yd = y1 - y0;
@@ -402,50 +402,15 @@ public class SimpleTreeTest {
         double sx = xd/steps;
         double sy = yd/steps;
         for(int i=1;i<=intermediateSteps;i++){
-            points.add(new Point(x0+sx*i, y0+sy*i, dd));
+            points.add(tree.immutable(x0+sx*i, y0+sy*i, dd));
         }
-        points.add(new Point(x1, y1, dd));
+        points.add(tree.immutable(x1, y1, dd));
 
         return points;
     }
 
 
-    static class Point implements SimpleTree.Reading {
-        final double lat;
-        final double lng;
-        final double dist;
 
-        Point(double lat, double lng, double dist) {
-            this.lat = lat;
-            this.lng = lng;
-            this.dist = dist;
-        }
-
-        @Override
-        public double getDistance() {
-            return dist;
-        }
-
-        @Override
-        public double getLat() {
-            return lat;
-        }
-
-        @Override
-        public double getLng() {
-            return lng;
-        }
-
-        @Override
-        public SimpleTree.Reading read() {
-            return this;
-        }
-
-        @Override
-        public String toString() {
-            return "["+lat+","+lng+"("+dist+")]";
-        }
-    }
 
     private static class TestTree extends SimpleTree {
         public TestTree() {

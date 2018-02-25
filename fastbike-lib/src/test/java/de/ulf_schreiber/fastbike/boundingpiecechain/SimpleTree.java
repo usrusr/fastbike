@@ -17,32 +17,39 @@ public class SimpleTree extends CoordinateDistance<
     }
 
     @Override
-    SimpleTree.ElementWriter createElementWriter() {
+    protected SimpleTree.ElementWriter createElementWriter() {
         return new ElementWriter(blocksize);
     }
 
     @Override
-    SimpleTree.AggregateWriter createAggregateWriter() {
+    protected SimpleTree.AggregateWriter createAggregateWriter() {
         return new AggregateWriter(blocksize);
     }
 
     @Override
-    Merging createMutableBounds() {
+    protected Merging createMutableBounds() {
         return new MutableBounds();
     }
 
     @Override
-    Writing createMutableVal() {
+    protected Writing createMutableVal() {
         return new MutableVal();
     }
+    Reading immutable(double lat, double lng, double distance){
+        Writing mutableVal = createMutableVal();
+        mutableVal.setLat(lat);
+        mutableVal.setLng(lng);
+        mutableVal.setDistance(distance);
+        return mutableVal.read();
+    }
 
-    interface Reading extends CoordinateDistance.Reading<Reading> {
+    protected interface Reading extends CoordinateDistance.Reading<Reading> {
     }
-    interface Writing extends CoordinateDistance.Writing<Reading,Writing>, CoordinateDistance.Reading<Reading>{
+    protected interface Writing extends CoordinateDistance.Writing<Reading,Writing>, CoordinateDistance.Reading<Reading>{
     }
-    interface Grouping extends CoordinateDistance.Grouping<Reading,Grouping>{
+    protected interface Grouping extends CoordinateDistance.Grouping<Reading,Grouping>{
     }
-    interface Merging extends CoordinateDistance.Merging<Reading,Grouping,Merging>, CoordinateDistance.Grouping<Reading,Grouping>{
+    protected interface Merging extends CoordinateDistance.Merging<Reading,Grouping,Merging>, CoordinateDistance.Grouping<Reading,Grouping>{
     }
 
     static class MutableBounds extends CoordinateDistance.VaringAggregate<

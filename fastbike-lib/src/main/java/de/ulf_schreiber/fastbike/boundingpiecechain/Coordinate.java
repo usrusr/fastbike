@@ -12,77 +12,47 @@ public abstract class Coordinate<
         B,
         L extends BaseTree.Editor<L,R,W,B>,
         A extends BaseTree.Editor<A,G,M,B>
-        > extends BaseTree<V, R, W, G, M, B, L, A> {
+        > extends BaseTree<V,R,W,G,M,B,L,A> {
 
     public Coordinate(int blocksize, double precision) {
         super(blocksize, precision);
     }
 
-    interface Reading<
+    protected interface Reading<
             R extends Reading<R>
-            > extends BaseTree.Reading<R> , Read {
-//        double getLat();
-//        double getLng();
+            > extends BaseTree.Reading<R> {
+        double getLat();
+        double getLng();
     }
 
-    interface Writing<
+    protected interface Writing<
             R extends Reading<R>,
-            W extends Writing<R, W>
-            > extends Reading<R>, BaseTree.Writing<R, W> {
+            W extends Writing<R,W>
+            > extends Reading<R>, BaseTree.Writing<R,W> {
         void setLat(double latitude);
         void setLng(double longitude);
     }
 
-    interface Grouping<
+    protected interface Grouping<
             R extends Reading<R>,
-            G extends Grouping<R, G>
-            > extends BaseTree.Grouping<R, G>, Group {
+            G extends Grouping<R,G>
+            > extends BaseTree.Grouping<R,G> {
 
-//        double getWest();
-//        double getNorth();
-//        double getEast();
-//        double getSouth();
-    }
-
-    interface Merging<
-            R extends Reading<R>,
-            G extends Grouping<R, G>,
-            M extends Merging<R, G, M>
-            > extends Grouping<R,G>, BaseTree.Merging<R, G, M> {
-        void setWest(double west);
-        void setNorth(double north);
-        void setEast(double east);
-        void setSouth(double south);
-    }
-
-    public interface Read {
-        double getLat();
-        double getLng();
-
-        class Immutable implements Read {
-            final private double lat;
-            final private double lng;
-            public static Immutable of(double lat, double lng){
-                return new Immutable(lat, lng);
-            }
-            public Immutable(double lat, double lng) {
-                this.lat = lat;
-                this.lng = lng;
-            }
-            @Override public double getLat() {
-                return lat;
-            }
-            @Override public double getLng() {
-                return lng;
-            }
-        }
-    }
-
-    public interface Group {
         double getWest();
         double getNorth();
         double getEast();
         double getSouth();
+    }
+
+    protected interface Merging<
+            R extends Reading<R>,
+            G extends Grouping<R,G>,
+            M extends Merging<R,G,M>
+            > extends Grouping<R,G>, BaseTree.Merging<R,G,M> {
+        void setWest(double west);
+        void setNorth(double north);
+        void setEast(double east);
+        void setSouth(double south);
     }
     @Override boolean sameAs(R one, R other) {
         return
@@ -112,7 +82,7 @@ public abstract class Coordinate<
         super.copy(from, to);
     }
 
-//    public boolean contains(Coordinate.Grouping<R, G> box, Coordinate.Reading<R> point) {
+//    public boolean contains(Coordinate.Grouping<R,G> box, Coordinate.Reading<R> point) {
 //        double lat = point.getLat();
 //        if(Double.isNaN(lat)) return false;
 //        double south = box.getSouth();
@@ -233,10 +203,10 @@ public abstract class Coordinate<
 
     protected abstract static class VaringAggregate<
             R extends Reading<R>,
-            G extends Grouping<R, G>,
-            M extends Merging<R, G, M>,
-            A extends VaringAggregate<R, G, M, A> & Merging<R,G,M>
-           > extends BaseTree.VaringAggregate<R, G, M, A> implements Merging<R,G,M> {
+            G extends Grouping<R,G>,
+            M extends Merging<R,G,M>,
+            A extends VaringAggregate<R,G,M,A> & Merging<R,G,M>
+           > extends BaseTree.VaringAggregate<R,G,M,A> implements Merging<R,G,M> {
         private double west = Double.NaN;
         private double north = Double.NaN;
         private double east = Double.NaN;

@@ -1,48 +1,58 @@
-package de.ulf_schreiber.fastbike.boundingpiecechain;
+package de.ulf_schreiber.fastbike.core;
 
 
-public class SimpleTreeHeight extends CoordinateDistanceHeight<
-        SimpleTreeHeight,
-        SimpleTreeHeight.Reading,
-        SimpleTreeHeight.Writing,
-        SimpleTreeHeight.Grouping,
-        SimpleTreeHeight.Merging,
+import de.ulf_schreiber.fastbike.boundingpiecechain.BaseTree;
+import de.ulf_schreiber.fastbike.boundingpiecechain.CoordinateDistanceHeight;
+
+public class Route extends CoordinateDistanceHeight<
+        Route,
+        Route.Reading,
+        Route.Writing,
+        Route.Grouping,
+        Route.Merging,
         double[],
-        SimpleTreeHeight.ElementWriter,
-        SimpleTreeHeight.AggregateWriter
+        Route.ElementWriter,
+        Route.AggregateWriter
     > {
 
-    public SimpleTreeHeight(int blocksize, double precision) {
+    public Route(int blocksize, double precision) {
         super(blocksize, precision);
     }
 
     @Override
-    SimpleTreeHeight.ElementWriter createElementWriter() {
+    protected Route.ElementWriter createElementWriter() {
         return new ElementWriter(blocksize);
     }
 
     @Override
-    SimpleTreeHeight.AggregateWriter createAggregateWriter() {
+    protected Route.AggregateWriter createAggregateWriter() {
         return new AggregateWriter(blocksize);
     }
 
     @Override
-    Merging createMutableBounds() {
+    protected Merging createMutableBounds() {
         return new MutableBounds();
     }
 
     @Override
-    Writing createMutableVal() {
+    protected Writing createMutableVal() {
         return new MutableVal();
     }
-
-    interface Reading extends CoordinateDistanceHeight.Reading<Reading> {
+    Reading immutable(double lat, double lng, double distance, double height){
+        Writing mutableVal = createMutableVal();
+        mutableVal.setLat(lat);
+        mutableVal.setLng(lng);
+        mutableVal.setDistance(distance);
+        mutableVal.setHeight(height);
+        return mutableVal.read();
     }
-    interface Writing extends CoordinateDistanceHeight.Writing<Reading,Writing>, CoordinateDistanceHeight.Reading<Reading>{
+    protected interface Reading extends CoordinateDistanceHeight.Reading<Reading> {
     }
-    interface Grouping extends CoordinateDistanceHeight.Grouping<Reading,Grouping>{
+    protected interface Writing extends CoordinateDistanceHeight.Writing<Reading,Writing>, CoordinateDistanceHeight.Reading<Reading>{
     }
-    interface Merging extends CoordinateDistanceHeight.Merging<Reading,Grouping,Merging>, CoordinateDistanceHeight.Grouping<Reading,Grouping>{
+    protected interface Grouping extends CoordinateDistanceHeight.Grouping<Reading,Grouping>{
+    }
+    protected interface Merging extends CoordinateDistanceHeight.Merging<Reading,Grouping,Merging>, CoordinateDistanceHeight.Grouping<Reading,Grouping>{
     }
 
     static class MutableBounds extends VaringAggregate<
@@ -103,7 +113,7 @@ public class SimpleTreeHeight extends CoordinateDistanceHeight<
             return this;
         }
     }
-    static final class AggregateWriter extends BaseTree.Editor<SimpleTreeHeight.AggregateWriter, Grouping, Merging, double[]> implements Grouping, Merging {
+    static final class AggregateWriter extends BaseTree.Editor<Route.AggregateWriter, Grouping, Merging, double[]> implements Grouping, Merging {
         protected AggregateWriter(int blocksize) {
             super(7, blocksize);
         }
@@ -129,13 +139,6 @@ public class SimpleTreeHeight extends CoordinateDistanceHeight<
             return buffer[actualIndex + 3];
         }
 
-        @Override public double getClimb() {
-            return buffer[actualIndex + 5];
-        }
-        @Override public double getLastHeight() {
-            return buffer[actualIndex + 6];
-        }
-
 
 
         @Override public void setDistance(double distance) {
@@ -153,14 +156,6 @@ public class SimpleTreeHeight extends CoordinateDistanceHeight<
         @Override public void setSouth(double south) {
             buffer[actualIndex + 3] = south;
         }
-
-        @Override public void setClimb(double climb) {
-            buffer[actualIndex + 5] = climb;
-        }
-        @Override public void setLastHeight(double lastHeight) {
-            buffer[actualIndex + 6] = lastHeight;
-        }
-
 
         @Override public Grouping read() {
             return this;

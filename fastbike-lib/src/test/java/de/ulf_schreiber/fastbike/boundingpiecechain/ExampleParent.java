@@ -19,32 +19,24 @@ public abstract class ExampleParent<
         super(blocksize, precision);
     }
 
-    interface Reading <
+    protected interface Reading <
             R extends Reading<R>
-            > extends BaseTree.Reading<R> , ExampleParent.PublicRead{
+            > extends BaseTree.Reading<R> {
     }
-    interface Writing<
+    protected interface Writing<
             R extends Reading<R>,
             W extends Writing<R,W>
             > extends Reading<R>, BaseTree.Writing<R,W> {
     }
-    interface Grouping<
+    protected interface Grouping<
             R extends Reading<R>,
             G extends Grouping<R,G>
-            > extends BaseTree.Grouping<R,G> , ExampleParent.PublicGroup{
+            > extends BaseTree.Grouping<R,G> {
     }
-    interface Merging <
+    protected interface Merging <
             R extends Reading<R>,
             G extends Grouping<R,G>,
             M extends Merging<R,G,M>
             > extends Grouping<R,G>, BaseTree.Merging<R,G,M> {
     }
-    public interface PublicRead extends BaseTree.PublicRead{
-
-    }
-    public interface PublicGroup extends BaseTree.PublicGroup{
-
-    }
-
-
 }

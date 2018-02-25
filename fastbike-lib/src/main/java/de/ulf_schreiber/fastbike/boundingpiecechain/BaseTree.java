@@ -640,14 +640,14 @@ public abstract class BaseTree<
         this.precision = precision;
     }
 
-    interface Reading <
+    protected interface Reading <
             R extends Reading<R>
-            > extends PublicRead {
+            > {
         R read();
 
         double getDistance();
     }
-    interface Writing<
+    protected interface Writing<
             R extends Reading<R>,
             W extends Writing<R,W>
             > extends Reading<R> {
@@ -655,29 +655,21 @@ public abstract class BaseTree<
 
         void setDistance(double distance);
     }
-    interface Grouping<
+    protected interface Grouping<
             R extends Reading<R>,
             G extends Grouping<R,G>
-            > extends PublicGroup {
+            > {
         G read();
 
         double getDistance();
     }
-    interface Merging <
+    protected interface Merging <
             R extends Reading<R>,
             G extends Grouping<R,G>,
             M extends Merging<R,G,M>
             > extends Grouping<R,G> {
         M write();
     }
-
-    public interface PublicRead {
-
-    }
-    public interface PublicGroup {
-
-    }
-
 
     boolean sameAs(R one, R other){
         return true;
@@ -707,10 +699,10 @@ public abstract class BaseTree<
     /**
      * must not be implemented in classes intended to be extended
      */
-    abstract L createElementWriter();
-    abstract A createAggregateWriter();
-    abstract M createMutableBounds();
-    abstract W createMutableVal();
+    protected abstract L createElementWriter();
+    protected abstract A createAggregateWriter();
+    protected abstract M createMutableBounds();
+    protected abstract W createMutableVal();
 
     final String stringifyPoint(R point){
         StringBuilder sb = new StringBuilder();
@@ -732,7 +724,7 @@ public abstract class BaseTree<
         sw.append(""+val);
     }
 
-    static abstract class Editor<L extends Editor<L,R,W,B>,R,W,B>  {
+    protected static abstract class Editor<L extends Editor<L,R,W,B>,R,W,B>  {
         protected final int weight;
         protected final int size;
 
@@ -794,8 +786,8 @@ public abstract class BaseTree<
 
     protected abstract static class Varing<
             R extends Reading<R>,
-            W extends Writing<R, W>,
-            V extends Varing<R, W, V> & Writing<R,W>
+            W extends Writing<R,W>,
+            V extends Varing<R,W,V> & Writing<R,W>
         > implements Writing<R,W> {
         @SuppressWarnings("unchecked")
         @Override public final R read() {
@@ -808,9 +800,9 @@ public abstract class BaseTree<
     }
     protected abstract static class VaringAggregate<
             R extends Reading<R>,
-            G extends Grouping<R, G>,
-            M extends Merging<R, G, M>,
-            A extends VaringAggregate<R, G, M, A> & Merging<R,G,M>
+            G extends Grouping<R,G>,
+            M extends Merging<R,G,M>,
+            A extends VaringAggregate<R,G,M,A> & Merging<R,G,M>
             > implements Merging<R,G,M>, Grouping<R,G> {
         @SuppressWarnings("unchecked")
         @Override public final G read() {

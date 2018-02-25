@@ -17,46 +17,30 @@ abstract public class CoordinateDistance<
         super(blocksize, precision);
     }
 
-    interface Reading <
+    protected interface Reading <
             R extends Reading<R>
-            > extends Coordinate.Reading<R>, Read {
+            > extends Coordinate.Reading<R> {
+        double getDistance();
     }
-    interface Writing<
+    protected interface Writing<
             R extends Reading<R>,
             W extends Writing<R,W>
             > extends Reading<R>, Coordinate.Writing<R,W> {
         void setDistance(double distance);
     }
-    interface Grouping<
+    protected interface Grouping<
             R extends Reading<R>,
             G extends Grouping<R,G>
-            > extends Coordinate.Grouping<R,G>, Group {
+            > extends Coordinate.Grouping<R,G> {
+        double getDistance();
     }
-    interface Merging <
+    protected interface Merging <
             R extends Reading<R>,
             G extends Grouping<R,G>,
             M extends Merging<R,G,M>
             > extends Grouping<R,G>, Coordinate.Merging<R,G,M> {
         void setDistance(double distance);
     }
-    public interface Read extends Coordinate.Read {
-        double getDistance();
-
-        class Immutable extends Coordinate.Read.Immutable implements Read {
-            private final double distance;
-            public Immutable(double lat, double lng, double distance) {
-                super(lat, lng);
-                this.distance = distance;
-            }
-            @Override public double getDistance() {
-                return distance;
-            }
-        }
-    }
-    public interface Group extends Coordinate.Group {
-        double getDistance();
-    }
-
 
     @Override void copy(R from, W to) {
         to.setDistance(from.getDistance());
@@ -122,7 +106,7 @@ abstract public class CoordinateDistance<
 
     protected abstract static class Varing<
             R extends Reading<R>,
-            W extends Writing<R, W>,
+            W extends Writing<R,W>,
             V extends Varing<R,W,V>
         > extends Coordinate.Varing<R,W,V> implements Writing<R,W> {
         private double distance = 0d;
@@ -140,10 +124,10 @@ abstract public class CoordinateDistance<
 
     protected abstract static class VaringAggregate<
             R extends Reading<R>,
-            G extends Grouping<R, G>,
-            M extends Merging<R, G, M>,
-            A extends VaringAggregate<R, G, M, A> & Merging<R,G,M>
-        > extends Coordinate.VaringAggregate<R, G, M, A> implements Merging<R,G,M> {
+            G extends Grouping<R,G>,
+            M extends Merging<R,G,M>,
+            A extends VaringAggregate<R,G,M,A> & Merging<R,G,M>
+        > extends Coordinate.VaringAggregate<R,G,M,A> implements Merging<R,G,M> {
         private double distance = 0d;
         @Override public double getDistance() {
             return distance;

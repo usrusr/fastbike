@@ -19,30 +19,24 @@ public abstract class ExampleChild<
         super(blocksize, precision);
     }
 
-    interface Reading <
+    protected interface Reading <
             R extends Reading<R>
-            > extends ExampleParent.Reading<R>, PublicRead {
+            > extends ExampleParent.Reading<R> {
     }
-    interface Writing<
+    protected interface Writing<
             R extends Reading<R>,
             W extends Writing<R,W>
             > extends Reading<R>, ExampleParent.Writing<R,W> {
     }
-    interface Grouping<
+    protected interface Grouping<
             R extends Reading<R>,
             G extends Grouping<R,G>
-            > extends ExampleParent.Grouping<R,G>, PublicGroup {
+            > extends ExampleParent.Grouping<R,G> {
     }
-    interface Merging <
+    protected interface Merging <
             R extends Reading<R>,
             G extends Grouping<R,G>,
             M extends Merging<R,G,M>
             > extends Grouping<R,G>, ExampleParent.Merging<R,G,M> {
-    }
-    public interface PublicRead extends ExampleParent.PublicRead{
-
-    }
-    public interface PublicGroup extends ExampleParent.PublicGroup {
-
     }
 }
