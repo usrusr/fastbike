@@ -1,3 +1,7 @@
+/**
+ * configures fastbike-lib for concrete use case
+ */
+
 apply plugin: 'java'
 
 dependencies {

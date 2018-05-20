@@ -1,1 +1,5 @@
-include ':app', ':fastbike-lib', ':fastbike-core'
+include ':fastbike-lib',
+        ':fastbike-core',
+        ':fastbike-mapsforge',
+        ':app',
+        ':desktop'

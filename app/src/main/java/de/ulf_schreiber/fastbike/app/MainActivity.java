@@ -1,16 +1,12 @@
 package de.ulf_schreiber.fastbike.app;
 
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.TextView;
 import de.ulf_schreiber.fastbike.android.BrouterClientAndroid;
 
@@ -26,38 +22,30 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
         final TextView textView = findViewById(R.id.helloworld);
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+
+
         client = new BrouterClientAndroid(MainActivity.this);
 
-
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) {
-
-//                if(client==null){
-//                    client = new BrouterClientAndroid(MainActivity.this);
-//                    return;
-//                }
-
-
-
-                String call = client.call(49.485032, 11.104860, 49.556402, 11.127689);
-                String text = "received:\n\n" + call + "\n";
-                System.out.println(text);
-                textView.setText(text);
-            }
-        });
+//
+//        fab.setOnClickListener(new View.OnClickListener() {
+//            @Override public void onClick(View view) {
+//
+////                if(client==null){
+////                    client = new BrouterClientAndroid(MainActivity.this);
+////                    return;
+////                }
+//
+//
+//
+//                String call = client.call(49.485032, 11.104860, 49.556402, 11.127689);
+//                String text = "received:\n\n" + call + "\n";
+//                System.out.println(text);
+//                textView.setText(text);
+//            }
+//        });
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.setDrawerListener(toggle);
-        toggle.syncState();
-
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
-        navigationView.setNavigationItemSelectedListener(this);
     }
 
     @Override
