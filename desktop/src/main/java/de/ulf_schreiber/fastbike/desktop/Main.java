@@ -9,6 +9,8 @@ import org.mapsforge.core.model.Point;
 import org.mapsforge.core.util.LatLongUtils;
 import org.mapsforge.core.util.Parameters;
 import org.mapsforge.map.awt.graphics.AwtGraphicFactory;
+import org.mapsforge.map.awt.input.MapViewComponentListener;
+import org.mapsforge.map.awt.input.MouseEventListener;
 import org.mapsforge.map.awt.util.AwtUtil;
 import org.mapsforge.map.awt.util.JavaPreferences;
 import org.mapsforge.map.awt.view.MapView;
@@ -19,7 +21,6 @@ import org.mapsforge.map.layer.cache.TileCache;
 import org.mapsforge.map.layer.debug.TileCoordinatesLayer;
 import org.mapsforge.map.layer.debug.TileGridLayer;
 import org.mapsforge.map.layer.download.TileDownloadLayer;
-import org.mapsforge.map.layer.download.tilesource.OpenStreetMapMapnik;
 import org.mapsforge.map.layer.download.tilesource.TileSource;
 import org.mapsforge.map.layer.hills.DiffuseLightShadingAlgorithm;
 import org.mapsforge.map.layer.hills.HillsRenderConfig;
@@ -30,14 +31,18 @@ import org.mapsforge.map.model.Model;
 import org.mapsforge.map.model.common.PreferencesFacade;
 import org.mapsforge.map.reader.MapFile;
 import org.mapsforge.map.rendertheme.InternalRenderTheme;
+import org.mapsforge.map.util.MapViewProjection;
 
 import java.awt.Dimension;
+import java.awt.event.MouseWheelEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.io.FilenameFilter;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.prefs.Preferences;
 
@@ -59,7 +64,7 @@ public final class Main {
      * @param args command line args: expects the map files as multiple parameters
      *             with possible SRTM hgt folder as 1st argument.
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         // Frame buffer HA2
         Parameters.FRAME_BUFFER_HA2 = true;
 
@@ -70,16 +75,23 @@ public final class Main {
         Parameters.SQUARE_FRAME_BUFFER = false;
 
         HillsRenderConfig hillsCfg = null;
-        File demFolder = getDemFolder(args);
-        if (demFolder != null) {
-            MemoryCachingHgtReaderTileSource tileSource = new MemoryCachingHgtReaderTileSource(demFolder, new DiffuseLightShadingAlgorithm(), AwtGraphicFactory.INSTANCE);
-            tileSource.setEnableInterpolationOverlap(true);
-            hillsCfg = new HillsRenderConfig(tileSource);
-            hillsCfg.indexOnThread();
-            args = Arrays.copyOfRange(args, 1, args.length);
+
+        File file = new File("local/run/settings.json");
+        Settings settings = Settings.load(file);
+        Settings.store(file, settings);
+
+
+        if(settings.demFolder!=null) {
+            File demFolder = new File(settings.demFolder);
+            if (demFolder != null && demFolder.exists()) {
+                MemoryCachingHgtReaderTileSource tileSource = new MemoryCachingHgtReaderTileSource(demFolder, new DiffuseLightShadingAlgorithm(), AwtGraphicFactory.INSTANCE);
+                tileSource.setEnableInterpolationOverlap(true);
+                hillsCfg = new HillsRenderConfig(tileSource);
+                hillsCfg.indexOnThread();
+            }
         }
 
-        List<File> mapFiles = getMapFiles(args);
+        List<File> mapFiles = getMapFiles(new File(settings.mapsFolder));
         final MapView mapView = createMapView();
         final BoundingBox boundingBox = addLayers(mapView, mapFiles, hillsCfg);
 
@@ -130,27 +142,16 @@ public final class Main {
                 new File(System.getProperty("java.io.tmpdir"), UUID.randomUUID().toString()));
 
         final BoundingBox boundingBox;
-        if (SHOW_RASTER_MAP) {
-            // Raster
-            mapView.getModel().displayModel.setFixedTileSize(tileSize);
-            TileSource tileSource = OpenStreetMapMapnik.INSTANCE;
-            TileDownloadLayer tileDownloadLayer = createTileDownloadLayer(tileCache, mapView.getModel().mapViewPosition, tileSource);
-            layers.add(tileDownloadLayer);
-            tileDownloadLayer.start();
-            mapView.setZoomLevelMin(tileSource.getZoomLevelMin());
-            mapView.setZoomLevelMax(tileSource.getZoomLevelMax());
-            boundingBox = new BoundingBox(LatLongUtils.LATITUDE_MIN, LatLongUtils.LONGITUDE_MIN, LatLongUtils.LATITUDE_MAX, LatLongUtils.LONGITUDE_MAX);
-        } else {
-            // Vector
-            mapView.getModel().displayModel.setFixedTileSize(tileSize);
-            MultiMapDataStore mapDataStore = new MultiMapDataStore(MultiMapDataStore.DataPolicy.RETURN_ALL);
-            for (File file : mapFiles) {
-                mapDataStore.addMapDataStore(new MapFile(file), false, false);
-            }
-            TileRendererLayer tileRendererLayer = createTileRendererLayer(tileCache, mapDataStore, mapView.getModel().mapViewPosition, hillsRenderConfig);
-            layers.add(tileRendererLayer);
-            boundingBox = mapDataStore.boundingBox();
+
+        // Vector
+        mapView.getModel().displayModel.setFixedTileSize(tileSize);
+        MultiMapDataStore mapDataStore = new MultiMapDataStore(MultiMapDataStore.DataPolicy.RETURN_ALL);
+        for (File file : mapFiles) {
+            mapDataStore.addMapDataStore(new MapFile(file), false, false);
         }
+        TileRendererLayer tileRendererLayer = createTileRendererLayer(tileCache, mapDataStore, mapView.getModel().mapViewPosition, hillsRenderConfig);
+        layers.add(tileRendererLayer);
+        boundingBox = mapDataStore.boundingBox();
 
         // Debug
         if (SHOW_DEBUG_LAYERS) {
@@ -162,7 +163,45 @@ public final class Main {
     }
 
     private static MapView createMapView() {
-        MapView mapView = new MapView();
+        final MapView mapView = new MapView(){
+
+            @Override public void addListeners() {
+                addComponentListener(new MapViewComponentListener(this));
+                final MapView mapView = this;
+                final MapViewProjection projection = new MapViewProjection(this);
+                MouseEventListener mouseEventListener = new MouseEventListener(this) {
+
+                    @Override public void mouseWheelMoved(MouseWheelEvent e) {
+                        byte zoomLevelDiff = (byte) -e.getWheelRotation();
+                        Model model = mapView.getModel();
+                        MapViewPosition mapViewPosition = model.mapViewPosition;
+
+                        Point center = mapView.getModel().mapViewDimension.getDimension().getCenter();
+                        double pow = Math.pow(2, zoomLevelDiff);
+                        double xDiff = center.x - e.getX();
+                        double yDiff = center.y - e.getY();
+                        float signum = Math.signum(zoomLevelDiff);
+                        double moveHorizontal;
+                        double moveVertical;
+                        if(zoomLevelDiff>0) {
+                            moveHorizontal = xDiff / pow * signum;
+                            moveVertical = yDiff / pow * signum;
+                        }else{
+                            moveHorizontal = xDiff * (pow) * signum*2;
+                            moveVertical = yDiff * (pow) * signum*2;
+                        }
+                        LatLong pivot = mapView.getMapViewProjection().fromPixels(e.getX(), e.getY());
+                        if (pivot != null) {
+                            mapViewPosition.setPivot(pivot);
+                            mapViewPosition.moveCenterAndZoom(moveHorizontal, moveVertical, zoomLevelDiff);
+                        }
+                    }
+                };
+                addMouseListener(mouseEventListener);
+                addMouseMotionListener(mouseEventListener);
+                addMouseWheelListener(mouseEventListener);
+            }
+        };
         mapView.getMapScaleBar().setVisible(true);
         if (SHOW_DEBUG_LAYERS) {
             mapView.getFpsCounter().setVisible(true);
@@ -194,26 +233,15 @@ public final class Main {
         return tileRendererLayer;
     }
 
-    private static File getDemFolder(String[] args) {
-        if (args.length == 0) {
-            throw new IllegalArgumentException("missing argument: <mapFile>");
-        }
 
-        File demFolder = new File(args[0]);
-        if (demFolder.exists() && demFolder.isDirectory() && demFolder.canRead()) {
-            return demFolder;
-        }
-        return null;
-    }
-
-    private static List<File> getMapFiles(String[] args) {
-        if (args.length == 0) {
-            throw new IllegalArgumentException("missing argument: <mapFile>");
-        }
-
+    private static List<File> getMapFiles(File mapsFolder) {
         List<File> result = new ArrayList<>();
-        for (String arg : args) {
-            File mapFile = new File(arg);
+        for (String arg : Objects.requireNonNull(mapsFolder.list(new FilenameFilter() {
+            @Override public boolean accept(File dir, String name) {
+                return name.toLowerCase().endsWith(".map");
+            }
+        }))) {
+            File mapFile = new File(mapsFolder, arg);
             if (!mapFile.exists()) {
                 throw new IllegalArgumentException("file does not exist: " + mapFile);
             } else if (!mapFile.isFile()) {

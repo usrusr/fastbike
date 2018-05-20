@@ -7,6 +7,7 @@ dependencies {
     compile ("org.mapsforge:mapsforge-themes:$mapsforgeVersion")
 
     compile project(':fastbike-mapsforge')
+    compile 'com.google.code.gson:gson:2.8.0'
 
     testCompile 'junit:junit:4.12'
     testCompile 'org.hamcrest:hamcrest-parent:1.3'
