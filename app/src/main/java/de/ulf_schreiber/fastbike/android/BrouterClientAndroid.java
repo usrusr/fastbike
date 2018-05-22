@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -11,6 +12,9 @@ import android.widget.Toast;
 import btools.routingapp.IBRouterService;
 import de.ulf_schreiber.fastbike.app.R;
 import de.ulf_schreiber.fastbike.core.BrouterClient;
+
+import java.util.AbstractMap;
+import java.util.Map;
 
 public class BrouterClientAndroid implements BrouterClient {
 
@@ -53,12 +57,15 @@ public class BrouterClientAndroid implements BrouterClient {
         bind();
     }
 
-    //    IBrouterService mService = null;
-    public String call(double fromLat, double fromLon, double toLat, double toLon){
+    @Override
+    public Cancellable call(double fromLat, double fromLon, double toLat, double toLon, final OnRoute resultHandler){
 
         bind();
 
-        if( ! isBound) return "not bound";
+        if( ! isBound) {
+            resultHandler.fail("not bound");
+            return null;
+        }
 
         Bundle bundle = new Bundle();
         //param params--> Map of params:
@@ -88,12 +95,9 @@ public class BrouterClientAndroid implements BrouterClient {
         bundle.putString("turnInstructionFormat", "osmand");
 //        bundle.putString("trackFormat", "kml");
 
-        try {
-            return service.getTrackFromParams(bundle);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-            return null;
-        }
+        RouteTask routeTask = new RouteTask(resultHandler);
+        routeTask.execute(bundle);
+        return routeTask;
     }
 
     private void bind() {
@@ -111,4 +115,38 @@ public class BrouterClientAndroid implements BrouterClient {
     }
 
 
+    private class RouteTask extends AsyncTask<Bundle, Void, Map.Entry<String, String>> implements Cancellable{
+
+        private final OnRoute resultHandler;
+
+        public RouteTask(OnRoute resultHandler) {
+            this.resultHandler = resultHandler;
+        }
+
+        @Override
+        protected void onPostExecute(Map.Entry<String, String> gpxOrFail) {
+            if(gpxOrFail.getKey()!=null){
+                resultHandler.success(gpxOrFail.getKey());
+            }else{
+                resultHandler.fail(gpxOrFail.getValue());
+            }
+        }
+
+        @Override
+        protected Map.Entry<String, String> doInBackground(Bundle... voids) {
+            Bundle bundle = voids[0];
+            try {
+                return new AbstractMap.SimpleImmutableEntry(service.getTrackFromParams(bundle), null);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+                return new AbstractMap.SimpleImmutableEntry(null, e.getMessage());
+            }
+
+        }
+
+        @Override
+        public void cancel() {
+            this.cancel(true);
+        }
+    }
 }

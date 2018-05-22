@@ -34,6 +34,7 @@ import org.mapsforge.map.rendertheme.InternalRenderTheme;
 import org.mapsforge.map.util.MapViewProjection;
 
 import java.awt.Dimension;
+import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -170,6 +171,25 @@ public final class Main {
                 final MapView mapView = this;
                 final MapViewProjection projection = new MapViewProjection(this);
                 MouseEventListener mouseEventListener = new MouseEventListener(this) {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        super.mouseClicked(e);
+                    }
+
+                    @Override
+                    public void mouseDragged(MouseEvent e) {
+                        super.mouseDragged(e);
+                    }
+
+                    @Override
+                    public void mousePressed(MouseEvent e) {
+                        super.mousePressed(e);
+                    }
+
+                    @Override
+                    public void mouseReleased(MouseEvent e) {
+                        super.mouseReleased(e);
+                    }
 
                     @Override public void mouseWheelMoved(MouseWheelEvent e) {
                         byte zoomLevelDiff = (byte) -e.getWheelRotation();
