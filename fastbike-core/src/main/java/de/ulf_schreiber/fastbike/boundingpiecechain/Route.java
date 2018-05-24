@@ -1,6 +1,9 @@
 package de.ulf_schreiber.fastbike.boundingpiecechain;
 
 
+import org.mapsforge.core.model.LatLong;
+import org.mapsforge.core.util.LatLongUtils;
+
 public class Route extends CoordinateDistanceHeight<
         Route,
         Route.Reading,
@@ -43,9 +46,21 @@ public class Route extends CoordinateDistanceHeight<
         mutableVal.setHeight(height);
         return mutableVal.read();
     }
-    protected interface Reading extends CoordinateDistanceHeight.Reading<Reading> {
+
+    public double calculateDistance(double lat, double lon, double ele, double lastLat, double lastLon, double lastEle) {
+        double groundDist = LatLongUtils.vincentyDistance(new LatLong(lat, lon), new LatLong(lastLat, lastLon));
+
+        double dEle = ele - lastEle;
+        if(Math.abs(dEle) < 0.1) return groundDist;
+
+        double gradientDist = Math.sqrt(dEle * dEle + groundDist * groundDist);
+
+        return gradientDist;
     }
-    protected interface Writing extends CoordinateDistanceHeight.Writing<Reading,Writing>, CoordinateDistanceHeight.Reading<Reading>{
+
+    public interface Reading extends CoordinateDistanceHeight.Reading<Reading> {
+    }
+    public interface Writing extends CoordinateDistanceHeight.Writing<Reading,Writing>, CoordinateDistanceHeight.Reading<Reading>{
     }
     protected interface Grouping extends CoordinateDistanceHeight.Grouping<Reading,Grouping>{
     }
@@ -57,7 +72,7 @@ public class Route extends CoordinateDistanceHeight<
     > implements Merging{
 
     }
-    protected static class MutableVal extends Varing<
+    public static class MutableVal extends Varing<
             Reading, Writing, MutableVal
     > implements Writing{
 

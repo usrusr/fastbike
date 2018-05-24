@@ -52,7 +52,7 @@ dependencies {
 
 
     compile "org.mapsforge:mapsforge-map-android:$mapsforgeVersion"
-    compile project(':fastbike-mapsforge')
+    compile project(':fastbike-lib')
     compile project(path: ':fastbike-core')
 }
 
