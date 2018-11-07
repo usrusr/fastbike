@@ -11,9 +11,17 @@ import android.os.RemoteException;
 import android.widget.Toast;
 import btools.routingapp.IBRouterService;
 import de.ulf_schreiber.fastbike.app.R;
+import de.ulf_schreiber.fastbike.boundingpiecechain.Route;
 import de.ulf_schreiber.fastbike.core.BrouterClient;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class BrouterClientAndroid implements BrouterClient {
@@ -63,7 +71,7 @@ public class BrouterClientAndroid implements BrouterClient {
         bind();
 
         if( ! isBound) {
-            resultHandler.fail("not bound");
+            resultHandler.fail(new IllegalStateException("not bound"));
             return null;
         }
 
@@ -115,7 +123,7 @@ public class BrouterClientAndroid implements BrouterClient {
     }
 
 
-    private class RouteTask extends AsyncTask<Bundle, Void, Map.Entry<String, String>> implements Cancellable{
+    private class RouteTask extends AsyncTask<Bundle, Void, Map.Entry<Iterable<Route.Reading>, Throwable>> implements Cancellable{
 
         private final OnRoute resultHandler;
 
@@ -124,22 +132,82 @@ public class BrouterClientAndroid implements BrouterClient {
         }
 
         @Override
-        protected void onPostExecute(Map.Entry<String, String> gpxOrFail) {
+        protected void onPostExecute(Map.Entry<Iterable<Route.Reading>, Throwable> gpxOrFail) {
             if(gpxOrFail.getKey()!=null){
+
+                Route route = resultHandler.getRoute();
+
                 resultHandler.success(gpxOrFail.getKey());
             }else{
-                resultHandler.fail(gpxOrFail.getValue());
+                resultHandler.fail(new RuntimeException(gpxOrFail.getValue()));
             }
         }
 
         @Override
-        protected Map.Entry<String, String> doInBackground(Bundle... voids) {
+        protected Map.Entry<Iterable<Route.Reading>, Throwable> doInBackground(Bundle... voids) {
             Bundle bundle = voids[0];
             try {
-                return new AbstractMap.SimpleImmutableEntry(service.getTrackFromParams(bundle), null);
-            } catch (RemoteException e) {
+                String trackFromParams = service.getTrackFromParams(bundle);
+                Route route = resultHandler.getRoute();
+                List<Route.Reading> list = new ArrayList<>();
+
+                XmlPullParser parser = XmlPullParserFactory.newInstance().newPullParser();
+                parser.setInput(new StringReader(trackFromParams));
+
+
+                boolean isTrkpt = false;
+                boolean isElev = false;
+                double ele = 0;
+                double lat = Double.NaN;
+                double lon = Double.NaN;
+                double lastLat = Double.NaN;
+                double lastLon = Double.NaN;
+                double lastEle = Double.NaN;
+                StringBuilder sb = new StringBuilder();
+                int event;
+                while((event = parser.next()) != XmlPullParser.END_DOCUMENT){
+                    if (event == XmlPullParser.START_TAG) {
+                        if (isTrkpt) {
+                            if ("ele".equals(parser.getName())) {
+                                isElev = true;
+                                sb.setLength(0);
+                            }
+                        } else if ("trkpt".equals(parser.getName())) {
+                            isTrkpt = true;
+                            lon = Double.parseDouble(parser.getAttributeValue(null, "lon"));
+                            lat = Double.parseDouble(parser.getAttributeValue(null, "lat"));
+                            sb.setLength(0);
+                        }
+                    } else if (event == XmlPullParser.END_TAG) {
+                        if (isElev && "ele".equals(parser.getName())) {
+                            ele = Double.parseDouble(sb.toString());
+                            isElev = false;
+                        } else if (isTrkpt && "trkpt".equals(parser.getName())) {
+
+
+                            double distance;
+                            if(Double.isNaN(lastLat)){
+                                distance = 0;
+                            } else {
+                                distance = route.calculateDistance(lat, lon, ele, lastLat, lastLon, lastEle);
+                            }
+                            Route.Reading val = route.immutable(lat, lon, distance, ele);
+
+                            list.add(val);
+                        }
+                    } else if (event == XmlPullParser.TEXT) {
+                        if (isElev) {
+                            sb.append(parser.getText().trim());
+                        }
+                    }
+                }
+
+
+
+                return new AbstractMap.SimpleImmutableEntry<Iterable<Route.Reading>, Throwable>(list, null);
+            } catch (RemoteException | XmlPullParserException | IOException e) {
                 e.printStackTrace();
-                return new AbstractMap.SimpleImmutableEntry(null, e.getMessage());
+                return new AbstractMap.SimpleImmutableEntry<Iterable<Route.Reading>, Throwable>(null, e);
             }
 
         }
