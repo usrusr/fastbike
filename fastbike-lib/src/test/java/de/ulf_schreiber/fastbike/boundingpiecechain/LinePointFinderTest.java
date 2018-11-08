@@ -24,7 +24,7 @@ public class LinePointFinderTest {
 
 
         final List<SimpleTree.Reading> acc = new ArrayList<>();
-        SimpleTree.SearchResult searchResult = tree.new SearchResult() {
+        CoordinateDistance.SearchResultHandler searchResultHandler = tree.new SearchResultHandler() {
             @Override
             void miss() {
                 acc.add(null);
@@ -42,7 +42,7 @@ public class LinePointFinderTest {
         SimpleTree.Writing to = tree.createMutableVal();
 
         acc.clear();
-        linePointFinder.find(coords(from, 1, 1), coords(to, 0,0), searchResult);
+        linePointFinder.find(coords(from, 1, 1), coords(to, 0,0), searchResultHandler);
 
         assertEquals("[null]", acc.toString());
 

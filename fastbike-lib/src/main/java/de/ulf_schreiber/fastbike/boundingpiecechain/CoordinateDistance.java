@@ -140,9 +140,9 @@ abstract public class CoordinateDistance<
     }
 
 
-    public class SearchResult {
+    public class SearchResultHandler {
 
-        SearchResult() {
+        SearchResultHandler() {
         }
 
         void miss() {
@@ -153,8 +153,7 @@ abstract public class CoordinateDistance<
 
         }
     }
-    public SearchResult search(R northWest, R southEast){
-        SearchResult ret = new SearchResult();
+    public void search(R northWest, R southEast, SearchResultHandler resultHandler){
 
         M searchBox = createMutableBounds();
         extendBy(searchBox, northWest);
@@ -164,37 +163,43 @@ abstract public class CoordinateDistance<
         middle.setLat((northWest.getLat()+southEast.getLat())/2);
         middle.setLon((northWest.getLon()+southEast.getLon())/2);
 
-        LinePointFinder lpf = new LinePointFinder(middle, northWest, southEast);
+        LinePointFinder lpf = new LinePointFinder(middle, northWest, southEast, resultHandler);
 
 
         R lastPoint = null;
         for(Piece piece : pieces){
             if(overlaps(piece.bounds, searchBox.read())) {
-                searchNode(piece.offset, piece.bounds.getDistance(), piece.root, searchBox.read(), middle.read(), createAggregateWriter(), createElementWriter(), ret, lastPoint, lpf);
+                searchNode(piece.offset, piece.bounds.getDistance(), piece.root, lpf);
             }
             lastPoint = piece.lastPoint;
         }
-
-        return ret;
     }
 
     class LinePointFinder {
         private final R center;
+        private final SearchResultHandler resultListener;
         private final M bounds;
-        private final M tempBounds;
 
-        LinePointFinder(W center, R northWest, R southEast){
+        private final M tempBounds = createMutableBounds();
+        private final W tempMutable = createMutableVal();
+
+        private final A groupReader = createAggregateWriter();
+        private final L elementReader = createElementWriter();
+
+        private R lastPoint;
+        private double done = 0d;
+
+        LinePointFinder(W center, R northWest, R southEast, SearchResultHandler resultListener){
             this.center = center.read();
+            this.resultListener = resultListener;
             this.bounds = createMutableBounds();
             extendBy(bounds, northWest);
             extendBy(bounds, southEast);
 
-            tempBounds = createMutableBounds();
-
         }
 
 
-        void find(R from, R to, SearchResult result) {
+        void find(R from, R to, SearchResultHandler result) {
 
             if(true)throw new RuntimeException("TODO");
 
@@ -203,26 +208,24 @@ abstract public class CoordinateDistance<
     }
 
     private R searchNode(double skip, double length,
-                         Node<?> node, G searchBox, R middle,
-                         A groupReader, L elementReader,
-                         SearchResult result, R lastPoint, LinePointFinder lpf){
+                         Node<?> node, LinePointFinder lpf){
         if(node.depth()>0){
             GroupNode group = GroupNode.class.cast(node);
-            G read = groupReader.wrap(group.array).read();
+            G read = lpf.groupReader.wrap(group.array).read();
             for(int i=0;i<group.elements && length>precision;i++){
-                groupReader.moveAbsolute(i);
+                lpf.groupReader.moveAbsolute(i);
 
                 double distance = read.getDistance();
 
                 if(distance <skip+precision){
                     skip-= distance;
                 }else{
-                    if(overlaps(read, searchBox)){
-                        lastPoint = searchNode(skip, length, group.children[i], searchBox, middle, groupReader, elementReader, result, lastPoint, lpf);
-                        groupReader.wrap(group.array);
+                    if(overlaps(read, lpf.bounds.read())){
+                        searchNode(skip, length, group.children[i], lpf);
+                        lpf.groupReader.wrap(group.array);
                     }else{
-                        result.miss();
-                        lastPoint = group.getLastPoint();
+                        lpf.lastPoint = group.getLastPoint();
+                        lpf.done += distance;
                     }
                     length-= distance-skip;
                     skip=0;
@@ -230,9 +233,9 @@ abstract public class CoordinateDistance<
             }
         }else{
             LeafNode leaf = LeafNode.class.cast(node);
-            R read = elementReader.wrap(leaf.array).read();
+            R read = lpf.elementReader.wrap(leaf.array).read();
             for(int i=0;i<leaf.elements && length>precision;i++) {
-                elementReader.moveAbsolute(i);
+                lpf.elementReader.moveAbsolute(i);
 
 
                 double distance = read.getDistance();
@@ -240,8 +243,10 @@ abstract public class CoordinateDistance<
                 if(distance - precision < skip){
                     skip-= distance;
                 }else{
-                    if(lastPoint==null || read.getDistance()<precision){
-                        if(contains(searchBox, read)){
+                    if(lpf.lastPoint==null){
+
+                    } else if(distance-skip < precision){
+                        if(contains(lpf.bounds.read(), read)){
                             result.hit(read);
                         }else{
                             result.miss();

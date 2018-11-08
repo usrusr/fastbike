@@ -39,7 +39,7 @@ public abstract class BaseTree<
         return sameAs(a,b);
     }
 
-
+    /** Either a GroupNode or a LeafNode, GroupNodes have an array of children, LeafNodes have actual coordinates */
     abstract class Node<N extends Node<N>> {
 
         B array;
